@@ -1,0 +1,4 @@
+export const HEART_RATE_SERVICE_UUID = 0x180d;
+export const HEART_RATE_MEASUREMENT_UUID = 0x2a37;
+export const BATTERY_SERVICE_UUID = 0x180f;
+export const BATTERY_LEVEL_UUID = 0x2a19;
