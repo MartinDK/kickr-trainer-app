@@ -15,7 +15,6 @@ import {
   recHasData,
 } from "./storage/indexedDb.js";
 import {
-  parseHeartRate,
   computeHrv,
   computeDfaAlpha1,
   RR_MIN_MS,
@@ -30,15 +29,17 @@ import {
   CYCLING_POWER_SERVICE_UUID,
   WAHOO_TRAINER_CHAR_UUID,
   UNLOCK_COMMAND,
+  unlockTrainer,
+  setTrainerResistance,
   hexLog,
   buildResistancePacket,
 } from "./bluetooth/trainer.js";
+
 import {
-  HEART_RATE_SERVICE_UUID,
-  HEART_RATE_MEASUREMENT_UUID,
-  BATTERY_SERVICE_UUID,
-  BATTERY_LEVEL_UUID,
+  connectHeartRateStrap,
+  parseHeartRate,
 } from "./bluetooth/heartRate.js";
+
 import { PEDAL_FILTERS } from "./bluetooth/pedals.js";
 
 const $ = (id) => document.getElementById(id);
@@ -1090,17 +1091,216 @@ function setWorkoutMode(newMode) {
   workout.lastTargetValue = null;
 }
 
-function toggleTrainer() {
-  logMessage(
-    "Trainer connect clicked (requires Web Bluetooth user prompt).",
-    "info",
-  );
+async function toggleTrainer() {
+  if (connState.trainer === "connected") {
+    // Disconnect logic
+    try {
+      if (gattServer && gattServer.connected) {
+        gattServer.disconnect();
+      }
+    } catch (e) {}
+
+    wahooCharacteristic = null;
+    gattServer = null;
+    bluetoothDevice = null;
+    setDeviceState("trainer", "disconnected");
+    wantConnected.trainer = false;
+    logMessage("Disconnected from Wahoo KICKR.", "info");
+    return;
+  }
+
+  setDeviceState("trainer", "connecting");
+  wantConnected.trainer = true;
+
+  try {
+    logMessage("Requesting Wahoo KICKR via Web Bluetooth...", "info");
+
+    // 1. Prompt user for device matching filters
+    const device = await navigator.bluetooth.requestDevice({
+      filters: TRAINER_FILTERS,
+      optionalServices: [CYCLING_POWER_SERVICE_UUID, "fitness_machine"],
+    });
+
+    bluetoothDevice = device;
+    saveDeviceId("trainer", device.id);
+
+    device.addEventListener("gattserverdisconnected", () => {
+      logMessage("Wahoo KICKR disconnected unexpectedly.", "error");
+      wahooCharacteristic = null;
+      gattServer = null;
+      setDeviceState("trainer", "disconnected");
+
+      // Attempt auto-reconnect if desired
+    });
+
+    logMessage(
+      `Connecting to GATT server on ${device.name || "Trainer"}...`,
+      "info",
+    );
+    gattServer = await device.gatt.connect();
+
+    // 2. Discover Cycling Power / Fitness Machine service & characteristic
+    const service = await gattServer.getPrimaryService(
+      CYCLING_POWER_SERVICE_UUID,
+    );
+    wahooCharacteristic = await service.getCharacteristic(
+      WAHOO_TRAINER_CHAR_UUID,
+    );
+
+    // 3. Unlock proprietary Wahoo opcodes
+    logMessage("Unlocking Wahoo KICKR control channel...", "info");
+    await unlockTrainer(wahooCharacteristic);
+
+    // 4. Subscribe to power measurements if available
+    try {
+      powerMeasurementCharacteristic = await service.getCharacteristic(
+        POWER_MEASUREMENT_UUID,
+      );
+      await powerMeasurementCharacteristic.startNotifications();
+      powerMeasurementCharacteristic.addEventListener(
+        "characteristicvaluechanged",
+        handlePowerMeasurement,
+      );
+      logMessage(
+        "Subscribed to live power telemetry notifications.",
+        "success",
+      );
+    } catch (err) {
+      logMessage(
+        `Could not subscribe to power characteristic: ${err.message}`,
+        "warning",
+      );
+    }
+
+    setDeviceState("trainer", "connected", device.name || "KICKR Trainer");
+    logMessage(
+      `Successfully connected and initialized ${device.name || "KICKR"}!`,
+      "success",
+    );
+  } catch (error) {
+    setDeviceState("trainer", "disconnected");
+    if (error.name === "NotFoundError") {
+      logMessage("Device selection was cancelled by the user.", "warning");
+    } else {
+      logMessage(`Trainer connection error: ${error.message}`, "error");
+    }
+  }
 }
-function toggleHr() {
-  logMessage(
-    "HR Strap connect clicked (requires Web Bluetooth user prompt).",
-    "info",
-  );
+
+// Live BLE power packet parser callback
+function handlePowerMeasurement(event) {
+  const value = event.target.value;
+  const now = Date.now();
+
+  // Standard Cycling Power Measurement Characteristic parser (0x2A63)
+  const flags = value.getUint16(0, true);
+  let offset = 2;
+  const instantPower = value.getInt16(offset, true);
+  offset += 2;
+
+  power.trainer.buf.push({ t: now, w: instantPower });
+  power.trainer.last = instantPower;
+  power.trainer.lastAt = now;
+
+  // Trim buffer older than 60s
+  while (power.trainer.buf.length && power.trainer.buf[0].t < now - 60000) {
+    power.trainer.buf.shift();
+  }
+}
+
+let hrCharacteristic = null;
+async function toggleHr() {
+  if (connState.hr === "connected") {
+    try {
+      if (hrDevice && hrDevice.gatt.connected) {
+        hrDevice.gatt.disconnect();
+      }
+    } catch (e) {}
+
+    hrCharacteristic = null;
+    hrDevice = null;
+    setDeviceState("hr", "disconnected");
+    wantConnected.hr = false;
+
+    // Clear UI display on disconnect
+    if ($("liveHrDisplay")) $("liveHrDisplay").innerText = "--";
+    if ($("liveRrDisplay")) $("liveRrDisplay").innerText = "--";
+    if ($("heartRateSub")) $("heartRateSub").innerText = "not connected";
+    if ($("batteryHr")) $("batteryHr").innerText = "Battery: --";
+
+    logMessage("Disconnected from Heart Rate strap.", "info");
+    return;
+  }
+
+  setDeviceState("hr", "connecting");
+  wantConnected.hr = true;
+
+  const result = await connectHeartRateStrap(logMessage);
+
+  if (result) {
+    hrDevice = result.device;
+    hrCharacteristic = result.hrChar;
+
+    hrDevice.addEventListener("gattserverdisconnected", () => {
+      logMessage("Heart Rate strap disconnected unexpectedly.", "error");
+      hrCharacteristic = null;
+      setDeviceState("hr", "disconnected");
+      if ($("liveHrDisplay")) $("liveHrDisplay").innerText = "--";
+      if ($("liveRrDisplay")) $("liveRrDisplay").innerText = "--";
+      if ($("heartRateSub")) $("heartRateSub").innerText = "disconnected";
+    });
+
+    hrCharacteristic.addEventListener("characteristicvaluechanged", (event) => {
+      const data = parseHeartRate(event.target.value);
+      const now = Date.now();
+      lastHr = data.hr;
+      lastHrAt = now;
+
+      // 1. Update UI display elements
+      if ($("liveHrDisplay")) {
+        $("liveHrDisplay").innerText = data.hr;
+      }
+      if (data.rrIntervals.length > 0 && $("liveRrDisplay")) {
+        $("liveRrDisplay").innerText =
+          data.rrIntervals[data.rrIntervals.length - 1];
+      }
+
+      // 2. Push HR data points into hrBuf for the chart plotter
+      hrBuf.push({ t: now, hr: data.hr });
+
+      // Keep hrBuf trimmed to the last 5 minutes (matching SPAN in chartPlotter)
+      while (hrBuf.length && hrBuf[0].t < now - 300000) {
+        hrBuf.shift();
+      }
+
+      // 3. Track running sum for ride average calculations
+      hrSum += data.hr;
+      hrCount++;
+
+      // 4. Push RR intervals into your HRV buffer
+      data.rrIntervals.forEach((rr) => {
+        rrBuffer.push({ t: now, rr });
+      });
+
+      // 5. Refresh statistical display metrics
+      updateHrvDisplay(now);
+    });
+
+    // Explicitly update device state to trigger the connected button style and name label
+    setDeviceState("hr", "connected", hrDevice.name || "Polar H10");
+
+    if (result.batteryLevel !== null && $("batteryHr")) {
+      $("batteryHr").innerText = `Battery: ${result.batteryLevel}%`;
+    }
+
+    logMessage(
+      `Connected to ${hrDevice.name || "Polar H10"} successfully!`,
+      "success",
+    );
+  } else {
+    setDeviceState("hr", "disconnected");
+    if ($("heartRateSub")) $("heartRateSub").innerText = "connection failed";
+  }
 }
 function togglePedals() {
   logMessage(

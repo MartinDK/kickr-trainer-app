@@ -24,6 +24,7 @@
       };
     </script>
     <link rel="stylesheet" href="./src/styles/main.css" />
+    <link rel="stylesheet" href="./src/styles/ui.css" />
   </head>
   <body
     class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased"
@@ -465,7 +466,123 @@
             style="height: 130px"
           ></canvas>
         </div>
+        <section class="ride-cockpit" aria-labelledby="rideCockpitTitle">
+          <div class="cockpit-grid">
+            <article class="cockpit-tile cockpit-tile--power">
+              <div class="cockpit-tile-header">
+                <span class="metric-label"
+                  >Power
+                  <span class="metric-label-detail">(3 s avg)</span></span
+                >
+                <span class="target-chip">
+                  <span id="targetModeLabel" class="target-chip-label"
+                    >ERG target</span
+                  >
+                  <strong id="targetDisplay" class="target-chip-value"
+                    >150 W</strong
+                  >
+                </span>
+              </div>
+              <div class="power-readouts">
+                <div class="power-readout">
+                  <span class="metric-label">Pedal power</span>
+                  <div class="metric-reading">
+                    <span
+                      id="pedalPowerDisplay"
+                      class="metric-value metric-value--hero metric-value--amber"
+                      >--</span
+                    >
+                    <span class="metric-unit">W</span>
+                  </div>
+                  <span id="pedalPowerSub" class="metric-note"
+                    >not connected</span
+                  >
+                </div>
+                <div class="power-readout">
+                  <span class="metric-label">Kickr power</span>
+                  <div class="metric-reading">
+                    <span
+                      id="trainerPowerDisplay"
+                      class="metric-value metric-value--hero metric-value--emerald"
+                      >--</span
+                    >
+                    <span class="metric-unit">W</span>
+                  </div>
+                  <span id="trainerPowerSub" class="metric-note"
+                    >not connected</span
+                  >
+                </div>
+                <div class="power-readout power-readout--delta">
+                  <span class="metric-label">Pedals - Kickr</span>
+                  <div class="metric-reading">
+                    <span
+                      id="deltaDisplay"
+                      class="metric-value metric-value--large"
+                      >--</span
+                    >
+                    <span class="metric-unit">W</span>
+                  </div>
+                  <span id="deltaSub" class="metric-note">&nbsp;</span>
+                </div>
+              </div>
+            </article>
 
+            <article class="cockpit-tile">
+              <span class="metric-label">Cadence</span>
+              <div class="metric-reading">
+                <span
+                  id="liveCadenceDisplay"
+                  class="metric-value metric-value--hero metric-value--indigo"
+                  >--</span
+                >
+                <span class="metric-unit">RPM</span>
+              </div>
+              <div class="metric-secondary">
+                <span id="cadenceSub" class="metric-note">&nbsp;</span>
+              </div>
+            </article>
+
+            <article class="cockpit-tile">
+              <span class="metric-label">Heart rate</span>
+              <div class="metric-reading">
+                <span
+                  id="liveHrDisplay"
+                  class="metric-value metric-value--hero metric-value--rose"
+                  >--</span
+                >
+                <span class="metric-unit">BPM</span>
+              </div>
+              <div class="metric-secondary">
+                <span class="metric-label">DFA a1</span>
+                <span
+                  id="dfaA1Display"
+                  class="metric-value metric-value--small metric-value--indigo"
+                  >--</span
+                >
+                <span class="metric-note">(AeT ~0.75)</span>
+              </div>
+            </article>
+
+            <article class="cockpit-tile cockpit-tile--time">
+              <div class="time-readout">
+                <span class="metric-label">Total time</span>
+                <span
+                  id="totalTimeDisplay"
+                  class="metric-value metric-value--large"
+                  >00:00</span
+                >
+              </div>
+              <div class="time-readout time-readout--interval">
+                <span class="metric-label">Interval</span>
+                <span
+                  id="intervalTimeDisplay"
+                  class="metric-value metric-value--medium metric-value--amber"
+                  >00:00</span
+                >
+              </div>
+            </article>
+          </div>
+        </section>
         <!-- Live Telemetry -->
         <div
           class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 shadow-xl backdrop-blur space-y-4"
@@ -478,151 +595,35 @@
                 Live Telemetry
               </h2>
               <p class="text-xs text-slate-500">
-                Power: Cycling Power (0x2A63), trainer vs pedals. HR / RR: Heart
-                Rate (0x2A37). Power figures are 3 s averages.
+                Power figures are 3 s averages.
               </p>
             </div>
           </div>
           <!-- Top Main Telemetry Grid -->
-          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-              <span class="text-slate-500 block text-[10px] font-mono"
-                >TOTAL TIME</span
-              >
-              <span
-                id="totalTimeDisplay"
-                class="text-2xl font-extrabold text-slate-200 font-mono"
-                >00:00</span
-              >
-              <div class="mt-2 pt-2 border-t border-slate-800">
-                <span class="text-slate-500 block text-[10px] font-mono"
-                  >INTERVAL</span
-                >
-                <span
-                  id="intervalTimeDisplay"
-                  class="text-xl font-extrabold text-amber-400 font-mono"
-                  >00:00</span
-                >
-              </div>
-            </div>
-            <div
-              class="bg-slate-950/60 p-4 rounded-xl border border-slate-800 space-y-3"
-            >
-              <!-- Pedal Power (Top) -->
-              <div>
-                <span class="text-slate-500 block text-[10px] font-mono"
-                  >PEDAL POWER</span
-                >
-                <div class="flex items-baseline space-x-1">
-                  <span
-                    id="pedalPowerDisplay"
-                    class="text-2xl font-extrabold text-amber-400 font-mono"
-                    >--</span
-                  >
-                  <span class="text-xs font-semibold text-slate-400">W</span>
-                </div>
-                <span
-                  id="pedalPowerSub"
-                  class="text-[10px] text-slate-500 font-mono block mt-0.5"
-                  >not connected</span
-                >
-              </div>
-
-              <!-- Divider -->
-              <div class="border-t border-slate-800/80"></div>
-
-              <!-- KICKR Power (Bottom) -->
-              <div>
-                <span class="text-slate-500 block text-[10px] font-mono"
-                  >KICKR POWER</span
-                >
-                <div class="flex items-baseline space-x-1">
-                  <span
-                    id="trainerPowerDisplay"
-                    class="text-2xl font-extrabold text-emerald-400 font-mono"
-                    >--</span
-                  >
-                  <span class="text-xs font-semibold text-slate-400">W</span>
-                </div>
-                <span
-                  id="trainerPowerSub"
-                  class="text-[10px] text-slate-500 font-mono block mt-0.5"
-                  >not connected</span
-                >
-              </div>
-            </div>
-            <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-              <span class="text-slate-500 block text-[10px] font-mono"
-                >PEDALS - KICKR</span
-              >
-              <span
-                id="deltaDisplay"
-                class="text-3xl font-extrabold text-slate-200 font-mono"
-                >--</span
-              >
-              <span class="text-xs font-semibold text-slate-400"> W</span>
-              <span
-                id="deltaSub"
-                class="text-[10px] text-slate-500 font-mono block mt-1"
-                >&nbsp;</span
-              >
-            </div>
-            <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-              <span class="text-slate-500 block text-[10px] font-mono"
-                >CADENCE</span
-              >
-              <span
-                id="liveCadenceDisplay"
-                class="text-3xl font-extrabold text-indigo-400 font-mono"
-                >--</span
-              >
-              <span class="text-xs font-semibold text-slate-400"> RPM</span>
-              <span
-                id="cadenceSub"
-                class="text-[10px] text-slate-500 font-mono block mt-1"
-                >&nbsp;</span
-              >
-            </div>
-            <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-              <span class="text-slate-500 block text-[10px] font-mono"
-                >HEART RATE</span
-              >
-              <span
-                id="topHrDisplay"
-                class="text-3xl font-extrabold text-rose-400 font-mono"
-                >--</span
-              >
-              <span class="text-xs font-semibold text-slate-400"> BPM</span>
-              <span class="text-[10px] text-slate-500 font-mono block mt-1"
-                >&nbsp;</span
-              >
-            </div>
-            <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-              <span class="text-slate-500 block text-[10px] font-mono"
-                >DFA a1</span
-              >
-              <span
-                id="dfaA1Display"
-                class="text-3xl font-extrabold text-indigo-400 font-mono"
-                >--</span
-              >
-              <span class="text-[10px] font-semibold text-slate-400 block mt-1"
-                >(AeT ~0.75)</span
-              >
-            </div>
-          </div>
 
           <canvas
             id="powerChart"
             class="w-full bg-slate-950/60 border border-slate-800 rounded-xl"
             style="height: 180px"
           ></canvas>
+        </div>
+        <div
+          class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 shadow-xl backdrop-blur"
+        >
+          <div class="flex flex-col sm:flex-row sm:justify-between gap-2">
+            <div>
+              <h2
+                class="text-sm font-semibold uppercase tracking-wider text-slate-400"
+              >
+                Live Heart Rate
+              </h2>
+            </div>
+          </div>
           <div
-            class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 pt-2 border-t border-slate-800"
+            class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 pt-2"
           >
             <p class="text-xs text-slate-400">
-              Heart rate variability: rolling window, use 120 s or more for a
-              steadier reading.
+              Use 120 s or more for a steadier reading.
             </p>
             <div class="flex space-x-2">
               <button
@@ -652,85 +653,74 @@
             </div>
           </div>
           <!-- Secondary HRV Stats Grid -->
-          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
-            <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-              <span class="text-slate-500 block text-[10px] font-mono"
-                >HEART RATE</span
-              >
-              <span
-                id="liveHrDisplay"
-                class="text-3xl font-extrabold text-rose-400 font-mono"
-                >--</span
-              >
-              <span class="text-xs font-semibold text-slate-400"> BPM</span>
-            </div>
-            <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-              <span class="text-slate-500 block text-[10px] font-mono"
-                >LAST RR</span
-              >
-              <span
-                id="liveRrDisplay"
-                class="text-3xl font-extrabold text-indigo-400 font-mono"
-                >--</span
-              >
-              <span class="text-xs font-semibold text-slate-400"> ms</span>
-            </div>
-            <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-              <span class="text-slate-500 block text-[10px] font-mono"
-                >RMSSD</span
-              >
-              <span
-                id="rmssdDisplay"
-                class="text-3xl font-extrabold text-emerald-400 font-mono"
-                >--</span
-              >
-              <span class="text-xs font-semibold text-slate-400"> ms</span>
-            </div>
-            <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-              <span class="text-slate-500 block text-[10px] font-mono"
-                >SDNN</span
-              >
-              <span
-                id="sdnnDisplay"
-                class="text-3xl font-extrabold text-indigo-400 font-mono"
-                >--</span
-              >
-              <span class="text-xs font-semibold text-slate-400"> ms</span>
-            </div>
-            <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-              <span class="text-slate-500 block text-[10px] font-mono"
-                >MEAN RR</span
-              >
-              <span
-                id="meanRrDisplay"
-                class="text-xl font-extrabold text-slate-200 font-mono"
-                >--</span
-              >
-              <span class="text-xs font-semibold text-slate-400"> ms</span>
-            </div>
-            <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-              <span class="text-slate-500 block text-[10px] font-mono"
-                >ln(RMSSD)</span
-              >
-              <span
-                id="lnRmssdDisplay"
-                class="text-xl font-extrabold text-slate-200 font-mono"
-                >--</span
-              >
-              <span class="text-xs font-semibold text-slate-400"> </span>
-            </div>
-            <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800">
-              <span class="text-slate-500 block text-[10px] font-mono"
-                >RR USED / REJECTED</span
-              >
-              <span class="text-xl font-extrabold text-slate-200 font-mono"
-                ><span id="rrCountDisplay">0</span> /
-                <span id="rejectedDisplay">0</span></span
-              >
-            </div>
+          <div
+            class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 mt-4"
+          >
+            <article class="cockpit-tile">
+              <span class="metric-label">Last RR</span>
+              <div class="metric-reading">
+                <span
+                  id="liveRrDisplay"
+                  class="metric-value metric-value--hero metric-value--indigo"
+                  >--</span
+                >
+                <span class="metric-unit">ms</span>
+              </div>
+            </article>
+            <article class="cockpit-tile">
+              <span class="metric-label">RMSSD</span>
+              <div class="metric-reading">
+                <span
+                  id="rmssdDisplay"
+                  class="metric-value metric-value--hero metric-value--indigo"
+                  >--</span
+                >
+                <span class="metric-unit">ms</span>
+              </div>
+            </article>
+            <article class="cockpit-tile">
+              <span class="metric-label">SDNN</span>
+              <div class="metric-reading">
+                <span
+                  id="sdnnDisplay"
+                  class="metric-value metric-value--hero metric-value--indigo"
+                  >--</span
+                >
+                <span class="metric-unit">ms</span>
+              </div>
+            </article>
+            <article class="cockpit-tile">
+              <span class="metric-label">MEAN RR</span>
+              <div class="metric-reading">
+                <span
+                  id="meanRrDisplay"
+                  class="metric-value metric-value--hero metric-value--indigo"
+                  >--</span
+                >
+                <span class="metric-unit">ms</span>
+              </div>
+            </article>
+            <article class="cockpit-tile">
+              <span class="metric-label">ln (RMSSD)</span>
+              <div class="metric-reading">
+                <span
+                  id="lnRmssdDisplay"
+                  class="metric-value metric-value--hero metric-value--indigo"
+                  >--</span
+                >
+                <span class="metric-unit">ms</span>
+              </div>
+            </article>
+            <article class="cockpit-tile">
+              <span class="metric-label">RR USED / REJECTED</span>
+              <div class="metric-reading font-mono">
+                <span id="rrCountDisplay">0</span> /
+                <span id="rejectedDisplay">0</span>
+              </div>
+            </article>
           </div>
 
-          <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center justify-between gap-3 mt-4">
             <p class="text-[11px] text-slate-500">
               RR outside 300-2000 ms, or more than 20% from the previous good
               beat, is rejected. No differences are taken across a rejected
