@@ -7,7 +7,7 @@
   const $ = (id) => document.getElementById(id);
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
   const average = (values) =>
-    values.reduce((sum, v) => sum + v, 0) / values.length;
+    values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0;
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   const formatGrade = (grade) =>
     (grade >= 0 ? "+" : "") + grade.toFixed(1) + "%";
@@ -25,7 +25,7 @@
       (b) => b.toString(16).padStart(2, "0"),
     ).join(" ");
 
-  // Small wrapper so the page still works where storage is blocked.
+  // Local storage wrapper
   const store = {
     get(key, fallback) {
       try {
@@ -39,7 +39,7 @@
       try {
         localStorage.setItem("trainingHub." + key, JSON.stringify(value));
       } catch (err) {
-        /* storage unavailable: settings just do not persist */
+        /* storage unavailable */
       }
     },
   };
@@ -58,7 +58,7 @@
     heartRateMeasurement: 0x2a37,
     batteryLevel: 0x2a19,
   };
-  const SIM_WIND_COEFFICIENT = 0.4; // not exposed in the UI; same default qdomyos-zwift sends
+  const SIM_WIND_COEFFICIENT = 0.4;
   const HISTORY_SECONDS = 300;
   const MODES = ["erg", "resistance", "level", "sim"];
   const MODE_NAMES = {
@@ -107,8 +107,8 @@
   );
 
   const control = {
-    viewMode: "erg", // tab on screen
-    activeMode: "erg", // mode last committed by the rider
+    viewMode: "erg",
+    activeMode: "erg",
     sim: { weight: 75, crr: 0.004, grade: 0 },
     sendTimer: null,
     sendStatus: { text: "", tone: "idle" },
@@ -119,6 +119,7 @@
     intervalSeconds: 0,
     target: { kind: "erg", value: 150 },
     targetSource: "manual", // "manual" | "workout"
+    fullTelemetryLog: [], // Full ride log recorded continuously
   };
 
   const workout = {
@@ -134,7 +135,7 @@
   };
 
   const telemetry = {
-    power: { trainer: [], pedals: [] }, // samples from the last 3 s
+    power: { trainer: [], pedals: [] },
     crank: { trainer: null, pedals: null },
     cadence: { trainer: null, pedals: null },
     heartRate: null,
@@ -144,7 +145,7 @@
     gapPending: false,
     rejectStreak: 0,
     hrvWindow: 120,
-    history: [],
+    history: [], // Rolling history for 5-minute graph
   };
 
   const demo = { heartRate: 105, beatClock: 0, nextRr: 570, rrDrift: 0 };
@@ -170,6 +171,7 @@
   let writeChain = Promise.resolve();
   let wakeLock = null;
   let lastTickAt = Date.now();
+  let latestDfaA1 = null;
 
   // ============================================================
   // TERMINAL + MODAL
@@ -178,6 +180,7 @@
 
   function log(message, type = "system") {
     const output = $("terminalLog");
+    if (!output) return;
     const pinnedToBottom =
       output.scrollHeight - output.scrollTop - output.clientHeight < 40;
     const line = document.createElement("div");
@@ -197,7 +200,6 @@
     $("packetCountLabel").textContent = packetCount + " packets TX/RX";
   }
 
-  // action: optional { label, dismissLabel, run } adds a second button.
   function showModal(title, message, action) {
     $("modalTitle").textContent = title;
     $("modalMessage").textContent = message;
@@ -408,7 +410,7 @@
           handleControlResponse(event.target.value);
         await trainer.control.startNotifications();
       } catch (err) {
-        /* responses are optional; writes still work without them */
+        /* write without response fallback */
       }
       await writeControlBytes([0x20, 0xee, 0xfc]);
       countPacket();
@@ -443,8 +445,7 @@
     const d = devices[kind];
     if (d.state !== "connected") return;
     d.closing = true;
-    if (d.device && d.device.gatt.connected)
-      d.device.gatt.disconnect(); // fires gattserverdisconnected
+    if (d.device && d.device.gatt.connected) d.device.gatt.disconnect();
     else handleDisconnected(kind);
   }
 
@@ -517,12 +518,12 @@
         wakeLock = null;
       });
     } catch (err) {
-      /* wake lock is a nicety; ignore when the browser refuses */
+      /* ignore screen lock failures */
     }
   }
 
   // ============================================================
-  // TRAINER COMMANDS (Wahoo control characteristic)
+  // TRAINER COMMANDS
   // ============================================================
   const u16 = (value) => [value & 0xff, (value >> 8) & 0xff];
 
@@ -545,7 +546,6 @@
     ],
   };
 
-  // GATT allows one operation at a time, so writes are chained.
   function writeControlBytes(bytes) {
     const characteristic = devices.trainer.control;
     const data = Uint8Array.from(bytes);
@@ -603,7 +603,6 @@
 
   function handleControlResponse(view) {
     countPacket();
-    // Observed replies look like [0x01, opcode, status]; status 0x40 means the trainer refused.
     const rejected = view.byteLength >= 3 && view.getUint8(2) === 0x40;
     log(
       "RX control response [" +
@@ -679,7 +678,6 @@
     });
   }
 
-  // Looking at another tab never changes the trainer; only adjusting a value does.
   function selectModeTab(mode) {
     control.viewMode = mode;
     renderModeTabs();
@@ -702,7 +700,6 @@
     if (mode === "sim") {
       const { weight, crr, grade } = control.sim;
       setTarget("sim", grade);
-      // Sim mode (0x43) has to be on the trainer before the grade (0x46).
       if (
         sendTrainerCommand(
           commands.simMode(weight, crr, SIM_WIND_COEFFICIENT),
@@ -729,7 +726,6 @@
     control.activeMode = mode;
     setTarget(mode, Number(sliders[mode].slider.value));
     clearTimeout(control.sendTimer);
-    // Short debounce so dragging a slider sends one command, not dozens.
     control.sendTimer = setTimeout(() => {
       ride.intervalSeconds = 0;
       sendActiveTarget();
@@ -852,8 +848,6 @@
       : Number(input.defaultValue);
   }
 
-  // MRC / ERG files: a [COURSE DATA] block of "minutes value" points,
-  // value is % of FTP (MINUTES PERCENT) or watts (MINUTES WATTS).
   function parseWorkoutFile(text, fileName) {
     const points = [];
     let unit = null;
@@ -881,7 +875,7 @@
         unit = "watts";
       }
     }
-    points.sort((a, b) => a.t - b.t); // stable, so step changes at the same minute keep their order
+    points.sort((a, b) => a.t - b.t);
     const duration = points.length ? points[points.length - 1].t : 0;
     if (points.length < 2 || duration <= 0) {
       throw new Error(
@@ -897,6 +891,7 @@
 
   function workoutValueAt(time) {
     const points = workout.points;
+    if (!points || !points.length) return { value: 0, segment: 0 };
     for (let i = 1; i < points.length; i++) {
       if (time < points[i].t) {
         const from = points[i - 1];
@@ -922,6 +917,7 @@
   }
 
   function applyWorkoutTarget() {
+    if (!workout.points.length) return;
     const target = workoutTargetAt(workout.elapsed);
     const isErg = workout.mode === "erg";
     const value = isErg ? target.watts : target.resistance;
@@ -969,16 +965,26 @@
   }
 
   function playWorkout() {
-    if (!workout.points.length) return;
+    if (!workout.points.length) {
+      showModal(
+        "No workout loaded",
+        "Please load a .mrc or .erg workout file first.",
+      );
+      return;
+    }
     if (workout.elapsed >= workout.duration) workout.elapsed = 0;
     clearTimeout(control.sendTimer);
     workout.playing = true;
     workout.lastSent = "";
     workout.segment = workoutValueAt(workout.elapsed).segment;
     ride.intervalSeconds = 0;
-    $("workoutPlayBtn").textContent = "Pause Workout";
+
+    const playBtn = $("workoutPlayBtn");
+    playBtn.textContent = "Pause Workout";
+    playBtn.classList.add("button--active");
+
     log(
-      "Workout running from " +
+      "Workout started/resumed from " +
         formatTime(workout.elapsed) +
         " (" +
         (workout.mode === "erg" ? "ERG" : "resistance") +
@@ -991,7 +997,9 @@
 
   function pauseWorkout(reason) {
     workout.playing = false;
-    $("workoutPlayBtn").textContent = "Resume Workout";
+    const playBtn = $("workoutPlayBtn");
+    playBtn.textContent = "Resume Workout";
+    playBtn.classList.remove("button--active");
     log(
       reason || "Workout paused at " + formatTime(workout.elapsed) + ".",
       "warning",
@@ -1002,7 +1010,9 @@
     workout.playing = false;
     workout.elapsed = 0;
     workout.segment = -1;
-    $("workoutPlayBtn").textContent = "Play Workout";
+    const playBtn = $("workoutPlayBtn");
+    playBtn.textContent = "Play Workout";
+    playBtn.classList.remove("button--active");
     renderWorkout();
   }
 
@@ -1020,7 +1030,9 @@
     applyWorkoutTarget();
     if (workout.elapsed >= workout.duration) {
       workout.playing = false;
-      $("workoutPlayBtn").textContent = "Play Workout";
+      const playBtn = $("workoutPlayBtn");
+      playBtn.textContent = "Play Workout";
+      playBtn.classList.remove("button--active");
       log("Workout complete. The trainer stays on the last target.", "success");
     }
     renderWorkout();
@@ -1045,7 +1057,6 @@
       const playButton = $("workoutPlayBtn");
       playButton.disabled = false;
       playButton.textContent = "Play Workout";
-      // The next step is now Play, so it takes over the primary style.
       playButton.classList.replace("button--secondary", "button--primary");
       $("workoutFileLabel").classList.replace(
         "button--primary",
@@ -1070,58 +1081,71 @@
     renderWorkout();
   }
 
+  // ============================================================
+  // FULL RIDE CSV EXPORT (TELEMETRY LOG)
+  // ============================================================
   function saveWorkoutCsv() {
-    if (!workout.points.length) {
+    if (!ride.fullTelemetryLog.length) {
       showModal(
-        "Nothing to save yet",
-        "Load a workout file first, then export its steps as CSV.",
+        "No ride data recorded",
+        "Connect a device or start the ride timer to log telemetry data for export.",
       );
       return;
     }
-    const ftp = currentFtp();
-    const rows = workout.points.map((point) => {
-      const percent =
-        workout.unit === "percent" ? point.v : (point.v / ftp) * 100;
-      const watts =
-        workout.unit === "percent" ? (point.v / 100) * ftp : point.v;
-      return [
-        (point.t / 60).toFixed(2),
-        percent.toFixed(1),
-        Math.round(watts),
-      ].join(",");
-    });
-    const blob = new Blob(
-      ["minutes,percent_ftp,target_watts\n" + rows.join("\n") + "\n"],
-      { type: "text/csv" },
-    );
+    const headers = [
+      "elapsed_seconds",
+      "time_formatted",
+      "pedal_power_w",
+      "trainer_power_w",
+      "target_power_w",
+      "heart_rate_bpm",
+      "dfa_a1",
+    ];
+
+    const rows = ride.fullTelemetryLog.map((entry) => [
+      entry.elapsedSeconds,
+      formatTime(entry.elapsedSeconds),
+      entry.pedals !== null ? entry.pedals : "",
+      entry.trainer !== null ? entry.trainer : "",
+      entry.target !== null ? entry.target : "",
+      entry.hr !== null ? entry.hr : "",
+      entry.dfaA1 !== null ? entry.dfaA1.toFixed(2) : "",
+    ]);
+
+    const csvContent =
+      headers.join(",") + "\n" + rows.map((r) => r.join(",")).join("\n") + "\n";
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/[:.]/g, "-")
+      .slice(0, 19);
     link.href = url;
-    link.download = workout.name.replace(/\.[^.]+$/, "") + ".csv";
+    link.download = `ride_telemetry_${timestamp}.csv`;
     document.body.appendChild(link);
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
-    log("Workout exported as CSV.", "success");
+    log(`Exported full ride log (${rows.length} records) to CSV.`, "success");
   }
 
   // ============================================================
   // TELEMETRY: PACKET PARSING
   // ============================================================
-  // Cycling Power Measurement (0x2A63)
   function handlePowerPacket(kind, view) {
     countPacket();
     if (view.byteLength < 4) return;
     const flags = view.getUint16(0, true);
     const watts = view.getInt16(2, true);
     let offset = 4;
-    if (flags & 0x01) offset += 1; // pedal power balance
-    if (flags & 0x04) offset += 2; // accumulated torque
-    if (flags & 0x10) offset += 6; // wheel revolution data
+    if (flags & 0x01) offset += 1;
+    if (flags & 0x04) offset += 2;
+    if (flags & 0x10) offset += 6;
     let rpm;
     if (flags & 0x20 && view.byteLength >= offset + 4) {
       const revolutions = view.getUint16(offset, true);
-      const eventTime = view.getUint16(offset + 2, true); // 1/1024 s
+      const eventTime = view.getUint16(offset + 2, true);
       const previous = telemetry.crank[kind];
       if (previous) {
         const revolutionDelta = (revolutions - previous.revolutions) & 0xffff;
@@ -1157,7 +1181,6 @@
       telemetry.cadence[kind] = { rpm, at: now };
   }
 
-  // Heart Rate Measurement (0x2A37)
   function handleHeartRatePacket(view) {
     countPacket();
     if (view.byteLength < 2) return;
@@ -1165,7 +1188,7 @@
     const wide = flags & 0x01;
     const bpm = wide ? view.getUint16(1, true) : view.getUint8(1);
     let offset = wide ? 3 : 2;
-    if (flags & 0x08) offset += 2; // energy expended
+    if (flags & 0x08) offset += 2;
     const intervals = [];
     if (flags & 0x10) {
       for (; offset + 1 < view.byteLength; offset += 2)
@@ -1196,7 +1219,6 @@
       const outOfRange = rr < 300 || rr > 2000;
       const jump =
         reference !== null && Math.abs(rr - reference) / reference > 0.2;
-      // After 5 rejections in a row the reference is stale, so an in-range beat re-syncs it.
       if (outOfRange || (jump && telemetry.rejectStreak < 5)) {
         telemetry.rejected.push(now);
         telemetry.rejectStreak++;
@@ -1230,7 +1252,6 @@
     for (const kind of ["pedals", "trainer"]) {
       const cadence = telemetry.cadence[kind];
       if (devices[kind].state === "connected" && cadence) {
-        // No new crank event for 3 s means the rider stopped pedalling.
         return {
           rpm: now - cadence.at < 3000 ? Math.round(cadence.rpm) : 0,
           source: kind === "pedals" ? "pedals" : "Kickr",
@@ -1240,7 +1261,6 @@
     return null;
   }
 
-  // Detrended fluctuation analysis, short-term exponent (box sizes 4 to 16 beats).
   function dfaAlpha1(intervals) {
     const count = intervals.length;
     if (count < 64) return null;
@@ -1319,7 +1339,7 @@
       if (squaredDifferences.length)
         rmssd = Math.sqrt(average(squaredDifferences));
     }
-    const alpha1 = dfaAlpha1(intervals);
+    latestDfaA1 = dfaAlpha1(intervals);
 
     $("rrCountDisplay").textContent = beats.length;
     $("rejectedDisplay").textContent = telemetry.rejected.filter(
@@ -1331,7 +1351,8 @@
     $("rmssdDisplay").textContent = rmssd === null ? "--" : rmssd.toFixed(1);
     $("lnRmssdDisplay").textContent =
       rmssd > 0 ? Math.log(rmssd).toFixed(2) : "--";
-    $("dfaA1Display").textContent = alpha1 === null ? "--" : alpha1.toFixed(2);
+    $("dfaA1Display").textContent =
+      latestDfaA1 === null ? "--" : latestDfaA1.toFixed(2);
   }
 
   function renderPowerReadout(kind, watts) {
@@ -1403,23 +1424,30 @@
       return;
     const rounded = (value) => (value === null ? null : Math.round(value));
 
-    // Check if current heart rate is fresh (< 5s old)
     let currentHr = null;
     if (telemetry.heartRate && now - telemetry.heartRate.at < 5000) {
       currentHr = telemetry.heartRate.bpm;
     }
 
-    telemetry.history.push({
+    const sample = {
       trainer: rounded(averagePower("trainer", now)),
       pedals: rounded(averagePower("pedals", now)),
       target: ride.target.kind === "erg" ? ride.target.value : null,
       hr: rounded(currentHr),
-    });
+      dfaA1: latestDfaA1,
+      elapsedSeconds: Math.round(ride.seconds),
+    };
+
+    // Store in rolling 5-minute graph data
+    telemetry.history.push(sample);
     if (telemetry.history.length > HISTORY_SECONDS) telemetry.history.shift();
+
+    // Store in full ride continuous telemetry log for CSV export
+    ride.fullTelemetryLog.push(sample);
   }
 
   // ============================================================
-  // DEMO DATA (only for devices the rider explicitly put in demo)
+  // DEMO DATA
   // ============================================================
   function demoRiderPower() {
     const { kind, value } = ride.target;
@@ -1549,7 +1577,6 @@
     ctx.lineJoin = "round";
     ctx.stroke();
 
-    // FTP reference line
     const ftpY = Math.round(y(ftpValue)) + 0.5;
     ctx.setLineDash([4, 4]);
     ctx.strokeStyle = "rgba(148, 163, 184, 0.6)";
@@ -1565,7 +1592,6 @@
     ctx.textBaseline = "bottom";
     ctx.fillText("FTP", width - pad - 2, ftpY - 2);
 
-    // Progress: shade what is done and mark the current position
     const progressX = x(workout.elapsed);
     ctx.fillStyle = "rgba(251, 191, 36, 0.12)";
     ctx.fillRect(pad, pad, progressX - pad, height - pad * 2);
@@ -1600,20 +1626,18 @@
     }
 
     const padLeft = 38;
-    const padRight = 38; // Increased to accommodate right HR axis
+    const padRight = 38;
     const padTop = 10;
     const padBottom = 20;
     const plotWidth = width - padLeft - padRight;
     const plotHeight = height - padTop - padBottom;
 
-    // Power Y-axis bounds (left)
     const topPower = Math.max(
       200,
       Math.ceil(
         (Math.max(200, ...(powerValues.length ? powerValues : [0])) * 1.1) / 50,
       ) * 50,
     );
-    // Heart Rate Y-axis bounds (right)
     const topHr = Math.max(
       160,
       Math.ceil(
@@ -1634,7 +1658,6 @@
 
     ctx.font = CANVAS_FONT;
 
-    // Draw Left Y-Axis (Power) Grid & Labels
     ctx.fillStyle = "#94a3b8";
     ctx.strokeStyle = "rgba(51, 65, 85, 0.55)";
     ctx.lineWidth = 1;
@@ -1650,7 +1673,6 @@
       ctx.fillText(Math.round(value) + "W", padLeft - 6, lineY);
     }
 
-    // Draw Right Y-Axis (Heart Rate) Labels
     ctx.textAlign = "left";
     for (let i = 0; i <= 4; i++) {
       const value = (topHr / 4) * i;
@@ -1659,7 +1681,6 @@
       ctx.fillText(Math.round(value) + "bpm", width - padRight + 6, lineY);
     }
 
-    // Time axis bottom labels
     ctx.fillStyle = "#94a3b8";
     ctx.textBaseline = "bottom";
     ctx.textAlign = "left";
@@ -1692,9 +1713,8 @@
     drawSeries("target", "#818cf8", true, false);
     drawSeries("trainer", "#34d399", false, false);
     drawSeries("pedals", "#fbbf24", false, false);
-    drawSeries("hr", "#f43f5e", false, true); // Render Heart Rate with coral/red color on right axis
+    drawSeries("hr", "#f43f5e", false, true);
 
-    // Draw Average Heart Rate Reference Line
     const avgHr = hrValues.length ? average(hrValues) : null;
     if (avgHr !== null) {
       const avgY = Math.round(yHr(avgHr)) + 0.5;
@@ -1730,6 +1750,7 @@
   function resetRideData() {
     ride.seconds = 0;
     ride.intervalSeconds = 0;
+    ride.fullTelemetryLog = [];
     telemetry.history = [];
     telemetry.beats = [];
     telemetry.rejected = [];
@@ -1738,7 +1759,10 @@
     telemetry.rejectStreak = 0;
     $("liveRrDisplay").textContent = "--";
     renderLive();
-    log("Ride timers, power trend and HRV data reset.", "info");
+    log(
+      "Ride timers, full telemetry log, power trend and HRV data reset.",
+      "info",
+    );
   }
 
   // ============================================================
@@ -1761,9 +1785,9 @@
   // ============================================================
   // EVENT WIRING
   // ============================================================
-  Object.keys(devices).forEach((kind) =>
-    $("btn-" + kind).addEventListener("click", () => connectDevice(kind)),
-  );
+  $("btn-trainer").addEventListener("click", () => connectDevice("trainer"));
+  $("btn-hr").addEventListener("click", () => connectDevice("hr"));
+  $("btn-pedals").addEventListener("click", () => connectDevice("pedals"));
   $("btn-demo").addEventListener("click", startDemo);
 
   MODES.forEach((mode) =>
@@ -1771,20 +1795,24 @@
   );
 
   Object.keys(sliders).forEach((key) => {
-    sliders[key].slider.addEventListener("input", () => {
-      renderSlider(key);
-      if (key === "grade")
-        showControlStatus(
-          "Sim values changed. Press Transmit Sim Parameters to apply them.",
-          "idle",
-        );
-      else commitManualTarget(key);
-    });
+    const slider = sliders[key].slider;
+    if (slider) {
+      slider.addEventListener("input", () => {
+        renderSlider(key);
+        if (key === "grade")
+          showControlStatus(
+            "Sim values changed. Press Transmit Sim Parameters to apply them.",
+            "idle",
+          );
+        else commitManualTarget(key);
+      });
+    }
   });
 
   document.querySelectorAll("[data-step-for]").forEach((button) => {
     button.addEventListener("click", () => {
       const slider = $(button.dataset.stepFor);
+      if (!slider) return;
       slider.value = clamp(
         Number(slider.value) + Number(button.dataset.step),
         Number(slider.min),
@@ -1794,19 +1822,22 @@
     });
   });
 
-  Object.keys(presets).forEach((key) =>
-    $(key + "EditBtn").addEventListener("click", () =>
-      togglePresetEditing(key),
-    ),
-  );
+  Object.keys(presets).forEach((key) => {
+    const editBtn = $(key + "EditBtn");
+    if (editBtn)
+      editBtn.addEventListener("click", () => togglePresetEditing(key));
+  });
 
   ["simWeightInput", "simCrrInput"].forEach((id) => {
-    $(id).addEventListener("input", () =>
-      showControlStatus(
-        "Sim values changed. Press Transmit Sim Parameters to apply them.",
-        "idle",
-      ),
-    );
+    const el = $(id);
+    if (el) {
+      el.addEventListener("input", () =>
+        showControlStatus(
+          "Sim values changed. Press Transmit Sim Parameters to apply them.",
+          "idle",
+        ),
+      );
+    }
   });
 
   $("btn-send-sim").addEventListener("click", () => {
@@ -1837,7 +1868,7 @@
   $("workoutFileInput").addEventListener("change", (event) => {
     const file = event.target.files[0];
     if (file) loadWorkoutFile(file);
-    event.target.value = ""; // lets the same file be loaded again
+    event.target.value = "";
   });
   $("workoutPlayBtn").addEventListener("click", () =>
     workout.playing ? pauseWorkout() : playWorkout(),
@@ -1856,9 +1887,10 @@
     renderWorkout();
   });
 
-  HRV_WINDOWS.forEach((seconds) =>
-    $("win-" + seconds).addEventListener("click", () => setHrvWindow(seconds)),
-  );
+  HRV_WINDOWS.forEach((seconds) => {
+    const winBtn = $("win-" + seconds);
+    if (winBtn) winBtn.addEventListener("click", () => setHrvWindow(seconds));
+  });
   $("btn-reset-telemetry").addEventListener("click", () => {
     showModal(
       "Reset ride data?",
@@ -1873,7 +1905,7 @@
   });
   $("diagnosticsPanel").addEventListener("toggle", () => {
     const output = $("terminalLog");
-    output.scrollTop = output.scrollHeight;
+    if (output) output.scrollTop = output.scrollHeight;
   });
 
   $("modalDefaultBtn").addEventListener("click", hideModal);

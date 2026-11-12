@@ -95,7 +95,6 @@
           </button>
         </p>
       </div>
-      <!-- 1. Live ride cockpit: the numbers a rider checks at a glance -->
 
       <!-- 2. Controls: what the rider changes during a session -->
       <div class="control-row">
@@ -551,6 +550,8 @@
           ></canvas>
         </section>
       </div>
+
+      <!-- 1. Live ride cockpit: the numbers a rider checks at a glance -->
       <section class="ride-cockpit" aria-labelledby="rideCockpitTitle">
         <div class="cockpit-grid">
           <article class="cockpit-tile cockpit-tile--power">
@@ -667,11 +668,14 @@
           </article>
         </div>
       </section>
+
       <!-- 3. Power trend -->
       <section class="dashboard-card" aria-labelledby="powerTrendTitle">
         <div class="card-header">
           <div class="card-heading-group">
-            <h2 id="powerTrendTitle" class="card-title">Power &amp; HR trend</h2>
+            <h2 id="powerTrendTitle" class="card-title">
+              Power &amp; HR trend
+            </h2>
             <p class="card-subtitle">
               Last 5 minutes. Power: Cycling Power (0x2A63), trainer vs pedals.
               HR / RR: Heart Rate (0x2A37). Power figures are 3 s averages.
@@ -699,19 +703,21 @@
             <span class="chart-legend-item"
               ><span
                 class="chart-legend-swatch"
-                style="background-color: #f43f5e;"
+                style="background-color: #f43f5e"
               ></span
               >Heart rate</span
             >
             <span class="chart-legend-item"
               ><span
                 class="chart-legend-swatch"
-                style="background-color: rgba(244, 63, 94, 0.6); border: 1px dashed #f43f5e;"
+                style="
+                  background-color: rgba(244, 63, 94, 0.6);
+                  border: 1px dashed #f43f5e;
+                "
               ></span
               >Avg HR</span
             >
           </div>
-          
         </div>
         <canvas
           id="powerChart"
@@ -721,14 +727,6 @@
         ></canvas>
       </section>
 
-      <!-- 4. Heart rate variability -->
-<!-- ... existing code ... -->
-        </div>
-      </div>
-    </div>
-    <script src="demo2.js"></script>
-  </body>
-</html>
       <!-- 4. Heart rate variability -->
       <section class="dashboard-card" aria-labelledby="hrvTitle">
         <div class="card-header">
