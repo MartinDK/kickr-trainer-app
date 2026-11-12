@@ -1397,14 +1397,23 @@
   function recordHistorySample(now) {
     if (
       devices.trainer.state !== "connected" &&
-      devices.pedals.state !== "connected"
+      devices.pedals.state !== "connected" &&
+      devices.hr.state !== "connected"
     )
       return;
     const rounded = (value) => (value === null ? null : Math.round(value));
+
+    // Check if current heart rate is fresh (< 5s old)
+    let currentHr = null;
+    if (telemetry.heartRate && now - telemetry.heartRate.at < 5000) {
+      currentHr = telemetry.heartRate.bpm;
+    }
+
     telemetry.history.push({
       trainer: rounded(averagePower("trainer", now)),
       pedals: rounded(averagePower("pedals", now)),
       target: ride.target.kind === "erg" ? ride.target.value : null,
+      hr: rounded(currentHr),
     });
     if (telemetry.history.length > HISTORY_SECONDS) telemetry.history.shift();
   }
@@ -1573,54 +1582,92 @@
     if (!surface) return;
     const { ctx, width, height } = surface;
     const history = telemetry.history;
-    const values = history
+    const powerValues = history
       .flatMap((sample) => [sample.trainer, sample.pedals, sample.target])
       .filter((value) => value !== null);
-    if (!values.length) {
+    const hrValues = history
+      .map((sample) => sample.hr)
+      .filter((value) => value !== null);
+
+    if (!powerValues.length && !hrValues.length) {
       drawCanvasMessage(
         ctx,
         width,
         height,
-        "Connect a trainer or pedals to see power",
+        "Connect a trainer, pedals or HR strap to see chart",
       );
       return;
     }
+
     const padLeft = 38;
-    const padRight = 10;
+    const padRight = 38; // Increased to accommodate right HR axis
     const padTop = 10;
     const padBottom = 20;
     const plotWidth = width - padLeft - padRight;
     const plotHeight = height - padTop - padBottom;
-    const top = Math.max(200, Math.ceil((Math.max(...values) * 1.1) / 50) * 50);
+
+    // Power Y-axis bounds (left)
+    const topPower = Math.max(
+      200,
+      Math.ceil(
+        (Math.max(200, ...(powerValues.length ? powerValues : [0])) * 1.1) / 50,
+      ) * 50,
+    );
+    // Heart Rate Y-axis bounds (right)
+    const topHr = Math.max(
+      160,
+      Math.ceil(
+        (Math.max(100, ...(hrValues.length ? hrValues : [0])) * 1.1) / 20,
+      ) * 20,
+    );
+
     const x = (index) =>
       padLeft +
       plotWidth -
       (history.length - 1 - index) * (plotWidth / (HISTORY_SECONDS - 1));
-    const y = (value) =>
-      padTop + plotHeight - (clamp(value, 0, top) / top) * plotHeight;
+
+    const yPower = (value) =>
+      padTop + plotHeight - (clamp(value, 0, topPower) / topPower) * plotHeight;
+
+    const yHr = (value) =>
+      padTop + plotHeight - (clamp(value, 0, topHr) / topHr) * plotHeight;
 
     ctx.font = CANVAS_FONT;
+
+    // Draw Left Y-Axis (Power) Grid & Labels
     ctx.fillStyle = "#94a3b8";
     ctx.strokeStyle = "rgba(51, 65, 85, 0.55)";
     ctx.lineWidth = 1;
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
     for (let i = 0; i <= 4; i++) {
-      const value = (top / 4) * i;
-      const lineY = Math.round(y(value)) + 0.5;
+      const value = (topPower / 4) * i;
+      const lineY = Math.round(yPower(value)) + 0.5;
       ctx.beginPath();
       ctx.moveTo(padLeft, lineY);
       ctx.lineTo(width - padRight, lineY);
       ctx.stroke();
       ctx.fillText(Math.round(value) + "W", padLeft - 6, lineY);
     }
+
+    // Draw Right Y-Axis (Heart Rate) Labels
+    ctx.textAlign = "left";
+    for (let i = 0; i <= 4; i++) {
+      const value = (topHr / 4) * i;
+      const lineY = Math.round(yHr(value)) + 0.5;
+      ctx.fillStyle = "#f43f5e";
+      ctx.fillText(Math.round(value) + "bpm", width - padRight + 6, lineY);
+    }
+
+    // Time axis bottom labels
+    ctx.fillStyle = "#94a3b8";
     ctx.textBaseline = "bottom";
     ctx.textAlign = "left";
     ctx.fillText("-5 min", padLeft, height - 4);
     ctx.textAlign = "right";
     ctx.fillText("now", width - padRight, height - 4);
 
-    const drawSeries = (key, color, dashed) => {
+    const drawSeries = (key, color, dashed, useHrAxis = false) => {
       let penDown = false;
       ctx.beginPath();
       history.forEach((sample, index) => {
@@ -1629,8 +1676,9 @@
           penDown = false;
           return;
         }
-        if (penDown) ctx.lineTo(x(index), y(value));
-        else ctx.moveTo(x(index), y(value));
+        const chartY = useHrAxis ? yHr(value) : yPower(value);
+        if (penDown) ctx.lineTo(x(index), chartY);
+        else ctx.moveTo(x(index), chartY);
         penDown = true;
       });
       ctx.setLineDash(dashed ? [5, 4] : []);
@@ -1640,9 +1688,30 @@
       ctx.stroke();
       ctx.setLineDash([]);
     };
-    drawSeries("target", "#818cf8", true);
-    drawSeries("trainer", "#34d399", false);
-    drawSeries("pedals", "#fbbf24", false);
+
+    drawSeries("target", "#818cf8", true, false);
+    drawSeries("trainer", "#34d399", false, false);
+    drawSeries("pedals", "#fbbf24", false, false);
+    drawSeries("hr", "#f43f5e", false, true); // Render Heart Rate with coral/red color on right axis
+
+    // Draw Average Heart Rate Reference Line
+    const avgHr = hrValues.length ? average(hrValues) : null;
+    if (avgHr !== null) {
+      const avgY = Math.round(yHr(avgHr)) + 0.5;
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = "rgba(244, 63, 94, 0.6)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padLeft, avgY);
+      ctx.lineTo(width - padRight, avgY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = CANVAS_FONT;
+      ctx.fillStyle = "#f43f5e";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "bottom";
+      ctx.fillText("Avg " + Math.round(avgHr) + " bpm", padLeft + 6, avgY - 2);
+    }
   }
 
   // ============================================================
