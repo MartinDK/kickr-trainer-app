@@ -96,6 +96,90 @@ $("btn-hr").addEventListener("click", () => connectDevice("hr"));
 $("btn-pedals").addEventListener("click", () => connectDevice("pedals"));
 $("btn-demo").addEventListener("click", startDemo);
 
+// ============================================================
+// REUSABLE STEPPER CONTROL WIRING
+// ============================================================
+function setupStepperInput({
+  inputId,
+  incBtnId,
+  decBtnId,
+  getFallback,
+  onCommit,
+}) {
+  const input = $(inputId);
+  const incBtn = $(incBtnId);
+  const decBtn = $(decBtnId);
+
+  if (!input) return;
+
+  const getBounds = () => ({
+    val: parseInt(input.value, 10) || getFallback(),
+    min: parseInt(input.min, 10) || 0,
+    max: parseInt(input.max, 10) || Infinity,
+    step: parseInt(input.step, 10) || 1,
+  });
+
+  const commit = (rawVal) => {
+    const { min, max } = getBounds();
+    const parsed = parseInt(rawVal, 10);
+
+    if (isNaN(parsed)) {
+      input.value = getFallback();
+    } else {
+      const clamped = Math.max(min, Math.min(max, parsed));
+      input.value = clamped;
+      onCommit(clamped);
+    }
+  };
+
+  if (incBtn) {
+    incBtn.addEventListener("click", () => {
+      const { val, max, step } = getBounds();
+      commit(Math.min(max, val + step));
+    });
+  }
+
+  if (decBtn) {
+    decBtn.addEventListener("click", () => {
+      const { val, min, step } = getBounds();
+      commit(Math.max(min, val - step));
+    });
+  }
+
+  input.addEventListener("blur", () => commit(input.value));
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      commit(input.value);
+      input.blur();
+    }
+  });
+}
+
+// --- Wire up Rider FTP ---
+setupStepperInput({
+  inputId: "ftpInput",
+  incBtnId: "ftpIncBtn",
+  decBtnId: "ftpDecBtn",
+  getFallback: () => workout.ftp || 250,
+  onCommit: (newFtp) => {
+    workout.ftp = newFtp;
+    localStorage.setItem("user_ftp", newFtp);
+    drawPowerChart();
+  },
+});
+
+// --- Wire up W' Capacity ---
+setupStepperInput({
+  inputId: "wPrimeInput",
+  incBtnId: "wPrimeIncBtn",
+  decBtnId: "wPrimeDecBtn",
+  getFallback: () => workout.wPrime || 19000,
+  onCommit: (newWPrime) => {
+    workout.wPrime = newWPrime;
+    localStorage.setItem("user_wprime", newWPrime);
+  },
+});
+
 MODES.forEach((mode) =>
   $("tab-" + mode).addEventListener("click", () => selectModeTab(mode)),
 );
@@ -248,17 +332,21 @@ window.addEventListener("resize", () => {
 // ============================================================
 // INITIAL RENDER & TICK LOOP
 // ============================================================
-const savedFtp = store.get("ftp", null);
-if (typeof savedFtp === "number" && savedFtp >= 50 && savedFtp <= 600)
-  $("ftpInput").value = savedFtp;
 
-const savedWPrime = store.get("wPrime", null);
-if (
-  typeof savedWPrime === "number" &&
-  savedWPrime >= 5000 &&
-  savedWPrime <= 50000
-)
-  $("wPrimeInput").value = savedWPrime;
+// Load saved values on startup
+const savedFtp = localStorage.getItem("user_ftp");
+if (savedFtp) {
+  workout.ftp = parseInt(savedFtp, 10);
+  const ftpInput = $("ftpInput");
+  if (ftpInput) ftpInput.value = savedFtp;
+}
+
+const savedWPrime = localStorage.getItem("user_wprime");
+if (savedWPrime) {
+  workout.wPrime = parseInt(savedWPrime, 10);
+  const wPrimeInput = $("wPrimeInput");
+  if (wPrimeInput) wPrimeInput.value = savedWPrime;
+}
 
 telemetry.wPrimeBalance = configuredWPrime();
 loadIntervalsCredentials();

@@ -139,7 +139,7 @@ export function setWorkoutMode(mode, silent) {
   $("btnModeErg").setAttribute("aria-pressed", String(mode === "erg"));
   $("btnModeRes").setAttribute("aria-pressed", String(mode === "res"));
   $("workoutModeDisplay").textContent =
-    mode === "erg" ? "ERG (% FTP)" : "Resistance (% value sent as brake %)";
+    mode === "erg" ? "(% FTP)" : "(0% - 100%)";
   if (!silent)
     log("Workout mode: " + $("workoutModeDisplay").textContent, "info");
   if (workout.playing) applyWorkoutTarget();

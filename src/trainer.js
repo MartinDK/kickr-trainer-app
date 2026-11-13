@@ -300,32 +300,40 @@ export function markActivePreset(key) {
     );
   });
 }
-
 export function togglePresetEditing(key) {
   const preset = presets[key];
   const slider = sliders[key].slider;
+
   if (preset.editing) {
     const step = Number(slider.step) || 1;
-    preset.values = Array.from($(key + "Presets").children).map(
-      (input, index) => {
-        const entered = Number(input.value);
-        if (input.value === "" || !Number.isFinite(entered))
-          return preset.values[index];
-        return clamp(
-          Math.round(entered / step) * step,
-          Number(slider.min),
-          Number(slider.max),
-        );
-      },
-    );
+
+    const inputs = $(key + "Presets").querySelectorAll("input");
+    preset.values = Array.from(inputs).map((input, index) => {
+      const entered = Number(input.value);
+      if (input.value === "" || !Number.isFinite(entered))
+        return preset.values[index];
+      return clamp(
+        Math.round(entered / step) * step,
+        Number(slider.min),
+        Number(slider.max),
+      );
+    });
+
     store.set("presets." + key, preset.values);
     log("Presets saved for " + key + ": " + preset.values.join(", "), "info");
   }
+
   preset.editing = !preset.editing;
   const editButton = $(key + "EditBtn");
   editButton.textContent = preset.editing ? "Save presets" : "Edit presets";
   editButton.classList.toggle("button--primary", preset.editing);
   editButton.classList.toggle("button--ghost", !preset.editing);
+
   renderPresets(key);
-  if (preset.editing) $(key + "Presets").firstElementChild.focus();
+
+  // Make sure we focus an input if it exists after rendering
+  if (preset.editing) {
+    const firstInput = $(key + "Presets").querySelector("input");
+    if (firstInput) firstInput.focus();
+  }
 }
