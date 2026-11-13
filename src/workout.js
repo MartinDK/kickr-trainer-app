@@ -8,7 +8,6 @@ import {
   telemetry,
   workout,
 } from "./state.js";
-import { drawWorkoutChart } from "./charts.js";
 import { commands, sendTrainerCommand, setTarget } from "./trainer.js";
 import { log, showModal } from "./ui.js";
 import { currentFtp } from "./metrics.js";
@@ -17,6 +16,7 @@ import {
   playIntervalChangeChime,
   playWorkoutCompleteChime,
 } from "./audio.js";
+import { drawPowerChart } from "./charts.js";
 
 export function parseWorkoutFile(text, fileName) {
   const points = [];
@@ -128,7 +128,7 @@ export function renderWorkout() {
   } else {
     $("workoutTargetWatts").textContent = "-- W";
   }
-  drawWorkoutChart(currentFtp());
+  drawPowerChart(currentFtp());
 }
 
 export function setWorkoutMode(mode, silent) {

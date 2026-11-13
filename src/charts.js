@@ -1,4 +1,3 @@
-// charts.js — HTML5 Canvas rendering for Power/HR trend & Workout thumbnail
 import {
   $,
   CANVAS_FONT,
@@ -34,76 +33,6 @@ function drawCanvasMessage(ctx, width, height, message) {
   ctx.textBaseline = "middle";
   ctx.fillText(message, width / 2, height / 2);
 }
-
-export function drawWorkoutChart(ftpValue) {
-  const surface = prepareCanvas($("workoutThumbnailCanvas"));
-  if (!surface) return;
-  const { ctx, width, height } = surface;
-  if (!workout.points.length) {
-    drawCanvasMessage(
-      ctx,
-      width,
-      height,
-      "Load a .mrc or .erg file to preview the workout",
-    );
-    return;
-  }
-  const pad = 10;
-  const points = workout.points;
-  const refFtp = workout.unit === "percent" ? 100 : ftpValue;
-  const top =
-    Math.max(...points.map((point) => point.v), refFtp) * 1.1 || 1;
-  const x = (time) => pad + (time / workout.duration) * (width - pad * 2);
-  const y = (value) => height - pad - (value / top) * (height - pad * 2);
-
-  ctx.beginPath();
-  ctx.moveTo(x(points[0].t), height - pad);
-  points.forEach((point) => ctx.lineTo(x(point.t), y(point.v)));
-  ctx.lineTo(x(workout.duration), height - pad);
-  ctx.closePath();
-  const fill = ctx.createLinearGradient(0, pad, 0, height - pad);
-  fill.addColorStop(0, "rgba(99, 102, 241, 0.5)");
-  fill.addColorStop(1, "rgba(99, 102, 241, 0.08)");
-  ctx.fillStyle = fill;
-  ctx.fill();
-
-  ctx.beginPath();
-  points.forEach((point, index) =>
-    index
-      ? ctx.lineTo(x(point.t), y(point.v))
-      : ctx.moveTo(x(point.t), y(point.v)),
-  );
-  ctx.strokeStyle = "#818cf8";
-  ctx.lineWidth = 2;
-  ctx.lineJoin = "round";
-  ctx.stroke();
-
-  const ftpY = Math.round(y(refFtp)) + 0.5;
-  ctx.setLineDash([4, 4]);
-  ctx.strokeStyle = "rgba(148, 163, 184, 0.6)";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(pad, ftpY);
-  ctx.lineTo(width - pad, ftpY);
-  ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.font = CANVAS_FONT;
-  ctx.fillStyle = "#94a3b8";
-  ctx.textAlign = "right";
-  ctx.textBaseline = "bottom";
-  ctx.fillText("FTP", width - pad - 2, ftpY - 2);
-
-  const progressX = x(workout.elapsed);
-  ctx.fillStyle = "rgba(251, 191, 36, 0.12)";
-  ctx.fillRect(pad, pad, progressX - pad, height - pad * 2);
-  ctx.strokeStyle = "#fbbf24";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(progressX, pad);
-  ctx.lineTo(progressX, height - pad);
-  ctx.stroke();
-}
-
 export function drawPowerChart() {
   const surface = prepareCanvas($("powerChart"));
   if (!surface) return;
@@ -116,16 +45,6 @@ export function drawPowerChart() {
     .map((sample) => sample.hr)
     .filter((value) => value !== null);
 
-  if (!powerValues.length && !hrValues.length) {
-    drawCanvasMessage(
-      ctx,
-      width,
-      height,
-      "Connect a trainer, pedals or HR strap to see chart",
-    );
-    return;
-  }
-
   const padLeft = 38;
   const padRight = 38;
   const padTop = 10;
@@ -136,7 +55,13 @@ export function drawPowerChart() {
   const topPower = Math.max(
     200,
     Math.ceil(
-      (Math.max(200, ...(powerValues.length ? powerValues : [0])) * 1.1) / 50,
+      (Math.max(
+        200,
+        ...(powerValues.length ? powerValues : [0]),
+        ...(workout.points.length ? workout.points.map((p) => p.v) : [0]),
+      ) *
+        1.1) /
+        50,
     ) * 50,
   );
   const topHr = Math.max(
@@ -146,10 +71,46 @@ export function drawPowerChart() {
     ) * 20,
   );
 
-  const x = (index) =>
-    padLeft +
-    plotWidth -
-    (history.length - 1 - index) * (plotWidth / (HISTORY_SECONDS - 1));
+  // Time windowing: Full workout duration if loaded, otherwise 5-min rolling window
+  const hasWorkout =
+    workout.points && workout.points.length > 0 && workout.duration > 0;
+  const viewDuration = hasWorkout ? workout.duration : HISTORY_SECONDS;
+  const currentElapsed = workout.elapsed || 0;
+
+  let startTime, endTime;
+  if (hasWorkout) {
+    if (currentElapsed <= viewDuration) {
+      startTime = 0;
+      endTime = viewDuration;
+    } else {
+      // Scrolled mode: keep window size equal to workout duration once past the end
+      endTime = currentElapsed;
+      startTime = currentElapsed - viewDuration;
+    }
+  } else {
+    endTime = currentElapsed;
+    startTime = Math.max(0, endTime - HISTORY_SECONDS);
+  }
+
+  // Time mapping function across the chart width
+  const mapTimeX = (time) => {
+    if (viewDuration <= 0) return padLeft;
+    return padLeft + ((time - startTime) / viewDuration) * plotWidth;
+  };
+
+  // Map history telemetry samples to chart X coordinates
+  const x = (index) => {
+    if (hasWorkout) {
+      const sampleTime = currentElapsed - (history.length - 1 - index);
+      return mapTimeX(sampleTime);
+    } else {
+      return (
+        padLeft +
+        plotWidth -
+        (history.length - 1 - index) * (plotWidth / (HISTORY_SECONDS - 1))
+      );
+    }
+  };
 
   const yPower = (value) =>
     padTop + plotHeight - (clamp(value, 0, topPower) / topPower) * plotHeight;
@@ -157,8 +118,69 @@ export function drawPowerChart() {
   const yHr = (value) =>
     padTop + plotHeight - (clamp(value, 0, topHr) / topHr) * plotHeight;
 
+  // 1. Draw Workout Profile Background Preview (Full workout duration scale)
+  if (hasWorkout) {
+    ctx.save();
+    ctx.beginPath();
+    let pathStarted = false;
+
+    workout.points.forEach((point) => {
+      const wx = mapTimeX(point.t);
+      const wy = yPower(point.v);
+      if (!pathStarted) {
+        ctx.moveTo(wx, padTop + plotHeight);
+        ctx.lineTo(wx, wy);
+        pathStarted = true;
+      } else {
+        ctx.lineTo(wx, wy);
+      }
+    });
+
+    if (pathStarted) {
+      ctx.lineTo(mapTimeX(workout.duration), padTop + plotHeight);
+      ctx.closePath();
+
+      const fill = ctx.createLinearGradient(0, padTop, 0, padTop + plotHeight);
+      fill.addColorStop(0, "rgba(99, 102, 241, 0.2)");
+      fill.addColorStop(1, "rgba(99, 102, 241, 0.03)");
+      ctx.fillStyle = fill;
+      ctx.fill();
+
+      // Outline stroke for target profile
+      ctx.beginPath();
+      let strokeStarted = false;
+      workout.points.forEach((point) => {
+        const wx = mapTimeX(point.t);
+        const wy = yPower(point.v);
+        if (!strokeStarted) {
+          ctx.moveTo(wx, wy);
+          strokeStarted = true;
+        } else {
+          ctx.lineTo(wx, wy);
+        }
+      });
+      ctx.strokeStyle = "rgba(99, 102, 241, 0.45)";
+      ctx.lineWidth = 1.5;
+      ctx.lineJoin = "round";
+      ctx.stroke();
+
+      // Live playhead indicator line showing current workout progress
+      if (currentElapsed >= 0 && currentElapsed <= workout.duration) {
+        const playheadX = mapTimeX(currentElapsed);
+        ctx.strokeStyle = "rgba(251, 191, 36, 0.8)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(playheadX, padTop);
+        ctx.lineTo(playheadX, padTop + plotHeight);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
   ctx.font = CANVAS_FONT;
 
+  // Grid lines & Power Axis (Left)
   ctx.fillStyle = "#94a3b8";
   ctx.strokeStyle = "rgba(51, 65, 85, 0.55)";
   ctx.lineWidth = 1;
@@ -174,6 +196,7 @@ export function drawPowerChart() {
     ctx.fillText(Math.round(value) + "W", padLeft - 6, lineY);
   }
 
+  // Heart Rate Axis (Right)
   ctx.textAlign = "left";
   for (let i = 0; i <= 4; i++) {
     const value = (topHr / 4) * i;
@@ -182,14 +205,37 @@ export function drawPowerChart() {
     ctx.fillText(Math.round(value) + "bpm", width - padRight + 6, lineY);
   }
 
+  // Time Axis Formatting Helper
+  const formatTime = (secs) => {
+    const m = Math.floor(Math.max(0, secs) / 60);
+    const s = Math.floor(Math.max(0, secs) % 60);
+    if (m >= 60) {
+      const h = Math.floor(m / 60);
+      const remM = m % 60;
+      return `${h}:${remM.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+    }
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
+  // Time Axis Labels
   ctx.fillStyle = "#94a3b8";
   ctx.textBaseline = "bottom";
   ctx.textAlign = "left";
-  ctx.fillText("-5 min", padLeft, height - 4);
+  ctx.fillText(
+    hasWorkout ? formatTime(startTime) : "-5 min",
+    padLeft,
+    height - 4,
+  );
   ctx.textAlign = "right";
-  ctx.fillText("now", width - padRight, height - 4);
+  ctx.fillText(
+    hasWorkout ? formatTime(endTime) : "now",
+    width - padRight,
+    height - 4,
+  );
 
+  // Live Telemetry Series Drawer
   const drawSeries = (key, color, dashed, useHrAxis = false) => {
+    if (!history.length) return;
     let penDown = false;
     ctx.beginPath();
     history.forEach((sample, index) => {
@@ -199,9 +245,14 @@ export function drawPowerChart() {
         return;
       }
       const chartY = useHrAxis ? yHr(value) : yPower(value);
-      if (penDown) ctx.lineTo(x(index), chartY);
-      else ctx.moveTo(x(index), chartY);
-      penDown = true;
+      const chartX = x(index);
+      if (chartX >= padLeft && chartX <= width - padRight) {
+        if (penDown) ctx.lineTo(chartX, chartY);
+        else ctx.moveTo(chartX, chartY);
+        penDown = true;
+      } else {
+        penDown = false;
+      }
     });
     ctx.setLineDash(dashed ? [5, 4] : []);
     ctx.strokeStyle = color;

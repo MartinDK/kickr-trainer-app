@@ -101,14 +101,7 @@
         <!-- Trainer control -->
         <section class="dashboard-card" aria-labelledby="trainerControlTitle">
           <div class="card-header">
-            <div class="card-heading-group">
-              <h2 id="trainerControlTitle" class="card-title">
-                Trainer control
-              </h2>
-              <p id="controlStatus" class="control-status">
-                Trainer not connected.
-              </p>
-            </div>
+            <h2 class="card-title">Training Data</h2>
           </div>
 
           <div
@@ -622,13 +615,6 @@
               >ERG (% FTP)</span
             >
           </div>
-
-          <canvas
-            id="workoutThumbnailCanvas"
-            class="chart-canvas chart-canvas--workout"
-            role="img"
-            aria-label="Workout profile"
-          ></canvas>
         </section>
       </div>
 
@@ -767,13 +753,7 @@
       <section class="dashboard-card" aria-labelledby="powerTrendTitle">
         <div class="card-header">
           <div class="card-heading-group">
-            <h2 id="powerTrendTitle" class="card-title">
-              Power &amp; HR trend
-            </h2>
-            <p class="card-subtitle">
-              Last 5 minutes. Power: Cycling Power (0x2A63), trainer vs pedals.
-              HR / RR: Heart Rate (0x2A37). Power figures are 3 s averages.
-            </p>
+            <h2 id="powerTrendTitle" class="card-title">Live Telemetry</h2>
           </div>
           <div class="chart-legend">
             <span class="chart-legend-item"
@@ -793,6 +773,16 @@
                 class="chart-legend-swatch chart-legend-swatch--target"
               ></span
               >ERG target</span
+            >
+            <span class="chart-legend-item"
+              ><span
+                class="chart-legend-swatch"
+                style="
+                  background-color: rgba(99, 102, 241, 0.25);
+                  border: 1px solid #6366f1;
+                "
+              ></span
+              >Workout profile</span
             >
             <span class="chart-legend-item"
               ><span
@@ -817,7 +807,7 @@
           id="powerChart"
           class="chart-canvas chart-canvas--power"
           role="img"
-          aria-label="Power and Heart Rate over the last five minutes"
+          aria-label="Training Data: Power, Workout Profile, and Heart Rate"
         ></canvas>
       </section>
 

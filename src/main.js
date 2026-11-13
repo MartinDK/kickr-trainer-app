@@ -15,7 +15,7 @@ import {
 } from "./state.js";
 import { hideModal, log, showModal } from "./ui.js";
 import { renderHrv } from "./hrv.js";
-import { drawPowerChart, drawWorkoutChart } from "./charts.js";
+import { drawPowerChart } from "./charts.js";
 import {
   commitManualTarget,
   renderPresets,
@@ -37,6 +37,7 @@ import {
   saveWorkoutCsv,
   setWorkoutMode,
   stopWorkout,
+  parseWorkoutFile,
 } from "./workout.js";
 import {
   connectDevice,
@@ -128,7 +129,8 @@ document.querySelectorAll("[data-step-for]").forEach((button) => {
 
 Object.keys(presets).forEach((key) => {
   const editBtn = $(key + "EditBtn");
-  if (editBtn) editBtn.addEventListener("click", () => togglePresetEditing(key));
+  if (editBtn)
+    editBtn.addEventListener("click", () => togglePresetEditing(key));
 });
 
 ["simWeightInput", "simCrrInput"].forEach((id) => {
@@ -170,7 +172,10 @@ $("btn-send-sim").addEventListener("click", () => {
 
 $("workoutFileInput").addEventListener("change", (event) => {
   const file = event.target.files[0];
-  if (file) loadWorkoutFile(file);
+  if (file) {
+    loadWorkoutFile(file);
+    drawPowerChart(); // <-- Add this line right here
+  }
   event.target.value = "";
 });
 $("workoutPlayBtn").addEventListener("click", () =>
@@ -248,7 +253,11 @@ if (typeof savedFtp === "number" && savedFtp >= 50 && savedFtp <= 600)
   $("ftpInput").value = savedFtp;
 
 const savedWPrime = store.get("wPrime", null);
-if (typeof savedWPrime === "number" && savedWPrime >= 5000 && savedWPrime <= 50000)
+if (
+  typeof savedWPrime === "number" &&
+  savedWPrime >= 5000 &&
+  savedWPrime <= 50000
+)
   $("wPrimeInput").value = savedWPrime;
 
 telemetry.wPrimeBalance = configuredWPrime();
