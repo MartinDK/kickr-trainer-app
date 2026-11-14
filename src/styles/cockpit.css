@@ -70,7 +70,7 @@
 
 /* ---------- Type ---------- */
 .metric-label {
-  font-size: 0.7rem;
+  font-size: 0.9rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ck-muted);
@@ -352,22 +352,25 @@
 .dfa-info summary {
   list-style: none;
   cursor: pointer;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   display: grid;
   place-items: center;
-  border: 1px solid var(--ck-border);
   border-radius: 50%;
-  font-size: 0.7rem;
-  color: var(--ck-muted);
+  background: rgba(167, 139, 250, 0.18);
+  border: 1px solid var(--ck-violet);
+  color: var(--ck-violet);
+  font-size: 0.8rem;
+  font-weight: 700;
   user-select: none;
 }
 .dfa-info summary::-webkit-details-marker {
   display: none;
 }
+.dfa-info summary:hover,
 .dfa-info[open] summary {
-  color: var(--ck-text);
-  border-color: var(--ck-muted);
+  background: var(--ck-violet);
+  color: #0d1424;
 }
 
 .dfa-info-panel {
@@ -376,24 +379,44 @@
   bottom: calc(100% + 8px);
   width: min(17rem, 80vw);
   padding: 12px 14px;
-  background: #111a2e;
-  border: 1px solid var(--ck-border);
+  background: #141d33;
+  border: 1px solid #2a3a5e;
   border-radius: 10px;
-  font-size: 0.78rem;
-  line-height: 1.4;
-  white-space: normal;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   z-index: 10;
 }
-.dfa-info-panel p {
+.dfa-info-panel strong {
+  color: var(--ck-violet);
+}
+.dfa-info-intro {
   margin: 0 0 8px;
+  font-size: 0.72rem;
+  color: var(--ck-muted);
 }
-.dfa-info-panel p:last-child {
-  margin-bottom: 0;
+.dfa-info-rows {
+  margin: 0;
 }
-.dfa-info-panel .metric-note {
-  white-space: normal;
+.dfa-info-rows > div {
+  padding: 8px 0;
+  border-top: 1px solid var(--ck-border);
 }
-/* ---------- Slow-metrics strip ---------- */
+.dfa-info-rows dt {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ck-text);
+}
+.dfa-num {
+  font-family: var(--ck-mono);
+  font-weight: 600;
+  color: var(--ck-violet);
+}
+.dfa-info-rows dd {
+  margin: 2px 0 0;
+  font-size: 0.72rem;
+  color: var(--ck-muted);
+} /* ---------- Slow-metrics strip ---------- */
 .cockpit-strip {
   display: grid;
   grid-template-columns: repeat(3, auto) 1fr;
