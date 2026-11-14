@@ -16,7 +16,8 @@ import {
   toHex,
   workout,
 } from "./state.js";
-import { countPacket, log, shouldLogPackets, showModal } from "./ui.js";
+import { countPacket, log, shouldLogPackets, showModal } from "./ui/ui.js";
+import { updateInterval, updateTargetDeviation } from "./ui/cockpit.js";
 import {
   sendActiveTarget,
   setSendStatus,
@@ -50,10 +51,7 @@ export function renderDevice(kind) {
   const d = devices[kind];
   const button = $("btn-" + kind);
   if (!button) return;
-  button.classList.toggle(
-    "device-button--connected",
-    d.state === "connected",
-  );
+  button.classList.toggle("device-button--connected", d.state === "connected");
   button.classList.toggle(
     "device-button--connecting",
     d.state === "connecting",
@@ -203,10 +201,7 @@ export async function connectDevice(kind) {
     resetDevice(kind);
     if (err.name === "NotFoundError") {
       log(d.role + ": no device selected (" + err.message + ")", "warning");
-    } else if (
-      err.name === "SecurityError" ||
-      err.name === "NotAllowedError"
-    ) {
+    } else if (err.name === "SecurityError" || err.name === "NotAllowedError") {
       offerDemo(
         "Bluetooth access is blocked on this page (" + err.message + ").",
       );
@@ -467,8 +462,7 @@ function currentCadence(now) {
 function renderPowerReadout(kind, watts) {
   const prefix = kind === "trainer" ? "trainerPower" : "pedalPower";
   const d = devices[kind];
-  $(prefix + "Display").textContent =
-    watts === null ? "--" : Math.round(watts);
+  $(prefix + "Display").textContent = watts === null ? "--" : Math.round(watts);
   $(prefix + "Sub").textContent =
     d.state !== "connected"
       ? "not connected"
@@ -484,6 +478,9 @@ export function renderLive(now = Date.now()) {
   const pedalWatts = averagePower("pedals", now);
   renderPowerReadout("trainer", trainerWatts);
   renderPowerReadout("pedals", pedalWatts);
+
+  const targetWatts = ride.target.kind === "erg" ? ride.target.value : null;
+  updateTargetDeviation(pedalWatts, targetWatts);
 
   if (trainerWatts !== null && pedalWatts !== null) {
     const delta = pedalWatts - trainerWatts;
@@ -510,7 +507,9 @@ export function renderLive(now = Date.now()) {
   $("liveHrDisplay").textContent = heartRateText;
 
   $("totalTimeDisplay").textContent = formatTime(ride.seconds);
-  $("intervalTimeDisplay").textContent = formatTime(ride.intervalSeconds);
+
+  const intervalTotalSeconds = null; // temporary
+  updateInterval(ride.intervalSeconds, intervalTotalSeconds);
 
   renderPowerMetrics();
   renderHrv(now);
@@ -551,7 +550,10 @@ export function recordHistorySample(now, elapsedSeconds = 1) {
     pedals,
     trainer,
     target,
-    np: telemetry.normalizedPower !== null ? Math.round(telemetry.normalizedPower) : null,
+    np:
+      telemetry.normalizedPower !== null
+        ? Math.round(telemetry.normalizedPower)
+        : null,
     tss: telemetry.tss,
     wPrimeBal: telemetry.wPrimeBalance,
     hr,
@@ -581,8 +583,7 @@ export function generateDemoData(now) {
   }
   if (isDemo("pedals")) {
     countPacket();
-    const cadence =
-      88 + Math.sin(now / 15000) * 4 + (Math.random() - 0.5) * 2;
+    const cadence = 88 + Math.sin(now / 15000) * 4 + (Math.random() - 0.5) * 2;
     recordPower(
       "pedals",
       Math.max(0, Math.round(riderPower * 1.02 + (Math.random() - 0.5) * 16)),
@@ -593,8 +594,7 @@ export function generateDemoData(now) {
     countPacket();
     const settledHeartRate = clamp(88 + riderPower * 0.3, 60, 185);
     demo.heartRate +=
-      (settledHeartRate - demo.heartRate) * 0.03 +
-      (Math.random() - 0.5) * 0.4;
+      (settledHeartRate - demo.heartRate) * 0.03 + (Math.random() - 0.5) * 0.4;
     demo.beatClock += 1000;
     const intervals = [];
     while (demo.beatClock >= demo.nextRr) {

@@ -14,7 +14,7 @@ import {
   store,
   workout,
 } from "./state.js";
-import { countPacket, log } from "./ui.js";
+import { countPacket, log } from "./ui/ui.js";
 
 const u16 = (value) => [value & 0xff, (value >> 8) & 0xff];
 

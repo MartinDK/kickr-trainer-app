@@ -1,4 +1,4 @@
-import { $, runtime } from "./state.js";
+import { $, runtime } from "../state.js";
 
 export const shouldLogPackets = () => {
   const toggle = $("logTelemetryToggle");

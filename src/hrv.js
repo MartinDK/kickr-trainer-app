@@ -1,5 +1,6 @@
 // hrv.js — HRV time-domain metrics and DFA alpha-1 calculation
 import { $, average, telemetry } from "./state.js";
+import { updateDfa } from "./ui/cockpit.js";
 
 export function dfaAlpha1(intervals) {
   const count = intervals.length;
@@ -28,8 +29,7 @@ export function dfaAlpha1(intervals) {
         sumXY += k * y;
         sumXX += k * k;
       }
-      const slope =
-        (size * sumXY - sumX * sumY) / (size * sumXX - sumX * sumX);
+      const slope = (size * sumXY - sumX * sumY) / (size * sumXX - sumX * sumX);
       const intercept = (sumY - slope * sumX) / size;
       for (let k = 0; k < size; k++) {
         const residual = profile[box * size + k] - (intercept + slope * k);
@@ -93,11 +93,10 @@ export function renderHrv(now) {
   $("rejectedDisplay").textContent = telemetry.rejected.filter(
     (t) => t >= cutoff,
   ).length;
-  $("meanRrDisplay").textContent =
-    meanRr === null ? "--" : Math.round(meanRr);
+  $("meanRrDisplay").textContent = meanRr === null ? "--" : Math.round(meanRr);
   $("sdnnDisplay").textContent = sdnn === null ? "--" : sdnn.toFixed(1);
   $("rmssdDisplay").textContent = rmssd === null ? "--" : rmssd.toFixed(1);
   $("lnRmssdDisplay").textContent =
     rmssd > 0 ? Math.log(rmssd).toFixed(2) : "--";
-  $("dfaA1Display").textContent = alpha1 === null ? "--" : alpha1.toFixed(2);
+  updateDfa(alpha1);
 }

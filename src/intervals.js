@@ -1,6 +1,6 @@
 // intervals.js — Free Intervals.icu API activity upload (no paid subscription required)
 import { $, ride, store, telemetry, workout } from "./state.js";
-import { log, showModal } from "./ui.js";
+import { log, showModal } from "./ui/ui.js";
 
 export function loadIntervalsCredentials() {
   const athleteId = store.get("intervals.athleteId", "");
@@ -23,7 +23,10 @@ export function saveIntervalsCredentials() {
       ? "Credentials saved locally."
       : "API key cleared.";
   }
-  log("Intervals.icu credentials updated (Athlete ID: " + athleteId + ").", "info");
+  log(
+    "Intervals.icu credentials updated (Athlete ID: " + athleteId + ").",
+    "info",
+  );
 }
 
 /**
@@ -107,7 +110,10 @@ export async function uploadToIntervalsIcu() {
 
   const statusEl = $("intervalsStatusMsg");
   if (statusEl) statusEl.textContent = "Uploading to Intervals.icu…";
-  log("Uploading ride TCX to Intervals.icu (athlete " + athleteId + ")...", "info");
+  log(
+    "Uploading ride TCX to Intervals.icu (athlete " + athleteId + ")...",
+    "info",
+  );
 
   try {
     const tcxXml = buildTcxPayload();
@@ -116,7 +122,9 @@ export async function uploadToIntervalsIcu() {
       : "Indoor Trainer Ride (" + Math.round(telemetry.tss) + " TSS)";
 
     const formData = new FormData();
-    const fileBlob = new Blob([tcxXml], { type: "application/vnd.garmin.tcx+xml" });
+    const fileBlob = new Blob([tcxXml], {
+      type: "application/vnd.garmin.tcx+xml",
+    });
     formData.append("file", fileBlob, activityName + ".tcx");
     formData.append("name", activityName);
     formData.append(
@@ -138,7 +146,9 @@ export async function uploadToIntervalsIcu() {
 
     if (!response.ok) {
       const errText = await response.text();
-      throw new Error(`HTTP ${response.status}: ${errText || response.statusText}`);
+      throw new Error(
+        `HTTP ${response.status}: ${errText || response.statusText}`,
+      );
     }
 
     const result = await response.json();

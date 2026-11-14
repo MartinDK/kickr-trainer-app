@@ -14,7 +14,13 @@ import {
   telemetry,
   workout,
 } from "./state.js";
-import { hideModal, log, showModal } from "./ui.js";
+import { hideModal, log, showModal } from "./ui/ui.js";
+import {
+  updateInterval,
+  updateTargetDeviation,
+  updateDfa,
+  updateWPrimeBal,
+} from "./ui/cockpit.js";
 import { renderHrv } from "./hrv.js";
 import { drawPowerChart } from "./charts.js";
 import {

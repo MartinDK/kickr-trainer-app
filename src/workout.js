@@ -9,7 +9,7 @@ import {
   workout,
 } from "./state.js";
 import { commands, sendTrainerCommand, setTarget } from "./trainer.js";
-import { log, showModal } from "./ui.js";
+import { log, showModal } from "./ui/ui.js";
 import { currentFtp } from "./metrics.js";
 import {
   playCountdownBeep,

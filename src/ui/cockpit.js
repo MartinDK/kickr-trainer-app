@@ -1,0 +1,83 @@
+// Helpers for the new cockpit elements. Your existing code can keep setting
+// pedalPowerDisplay, trainerPowerDisplay, topHrDisplay etc. exactly as before.
+
+const $ = (id) => document.getElementById(id);
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+function formatClock(totalSeconds) {
+  const s = Math.max(0, Math.round(totalSeconds));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const mm = String(m).padStart(2, "0");
+  const ss = String(sec).padStart(2, "0");
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+// Interval: shows REMAINING time and a progress bar of how much has elapsed.
+// Pass null for totalSeconds in an unstructured ride to fall back to a lap timer.
+function updateInterval(elapsedSeconds, totalSeconds) {
+  if (totalSeconds == null) {
+    $("intervalLabel").textContent = "Lap time";
+    $("intervalTimeDisplay").textContent = formatClock(elapsedSeconds);
+    $("intervalProgressFill").style.width = "0%";
+    $("intervalSub").textContent = "no interval";
+    return;
+  }
+  const remaining = Math.max(0, totalSeconds - elapsedSeconds);
+  $("intervalLabel").textContent = "Interval remaining";
+  $("intervalTimeDisplay").textContent = formatClock(remaining);
+  $("intervalProgressFill").style.width =
+    `${clamp(elapsedSeconds / totalSeconds, 0, 1) * 100}%`;
+  $("intervalSub").textContent = `of ${formatClock(totalSeconds)}`;
+}
+
+// Target deviation bar: full scale is +/- 20% of target (change SPAN to taste).
+function updateTargetDeviation(actualW, targetW) {
+  const SPAN = 0.2;
+  const fill = $("targetBarFill");
+  const label = $("targetDeviation");
+  if (actualW == null || !targetW) {
+    fill.style.width = "0%";
+    label.textContent = "-- vs target";
+    return;
+  }
+  const diff = Math.round(actualW - targetW);
+  const dev = clamp(diff / (targetW * SPAN), -1, 1);
+  const half = Math.abs(dev) * 50;
+  fill.style.left = `${dev < 0 ? 50 - half : 50}%`;
+  fill.style.width = `${half}%`;
+  label.textContent = `${diff > 0 ? "+" : ""}${diff} W`;
+}
+
+// DFA a1 gauge: scale 0.25 -> 1.25, so AnT 0.50 = 25% and AeT 0.75 = 50%.
+function updateDfa(value) {
+  const marker = $("dfaMarker");
+  if (value == null || Number.isNaN(value)) {
+    marker.classList.add("is-hidden");
+    $("dfaA1Display").textContent = "--";
+    return;
+  }
+  marker.classList.remove("is-hidden");
+  marker.style.left = `${clamp((value - 0.25) / 1.5, 0.02, 0.98) * 100}%`;
+  $("dfaA1Display").textContent = value.toFixed(2);
+}
+
+// W'bal bar: turns orange below 25%.
+function updateWPrimeBal(balKj, maxKj) {
+  $("wPrimeBalDisplay").textContent = balKj.toFixed(1);
+  $("wPrimeMaxDisplay").textContent = maxKj.toFixed(1);
+  const frac = clamp(balKj / maxKj, 0, 1);
+  $("wPrimeBalFill").style.width = `${frac * 100}%`;
+  document
+    .querySelector(".progress-bar--wbal")
+    .classList.toggle("is-low", frac < 0.25);
+}
+
+export {
+  formatClock,
+  updateInterval,
+  updateTargetDeviation,
+  updateDfa,
+  updateWPrimeBal,
+};
