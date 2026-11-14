@@ -771,6 +771,38 @@
                   >--</span
                 >
               </div>
+
+              <!-- ...gauge and dfa-scale stay as they are... -->
+
+              <div class="dfa-zone">
+                <span id="dfaZone" class="dfa-zone-name">--</span>
+                <span id="dfaZoneNote" class="metric-note">no data</span>
+                <details class="dfa-info">
+                  <summary aria-label="What do AeT and AnT mean?">?</summary>
+                  <div class="dfa-info-panel">
+                    <p>
+                      DFA a1 measures how organised your heartbeat timing is. It
+                      falls as effort rises.
+                    </p>
+                    <p>
+                      <strong>Above 0.75:</strong> easy, below your aerobic
+                      threshold (AeT, the top of zone 2).
+                    </p>
+                    <p>
+                      <strong>0.50 to 0.75:</strong> moderate, between the two
+                      thresholds.
+                    </p>
+                    <p>
+                      <strong>Below 0.50:</strong> hard, beyond your anaerobic
+                      threshold (AnT, close to FTP).
+                    </p>
+                    <p class="metric-note">
+                      Cut-offs are population averages. Yours may sit a little
+                      higher or lower.
+                    </p>
+                  </div>
+                </details>
+              </div>
               <div class="dfa-gauge" aria-hidden="true">
                 <span class="dfa-tick dfa-tick--ant"></span>
                 <span class="dfa-tick dfa-tick--aet"></span>

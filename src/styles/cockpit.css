@@ -333,6 +333,66 @@
   box-shadow: 0 0 0 2px var(--ck-tile);
   transition: left 0.3s linear;
 }
+.dfa-zone {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 1.4em;
+}
+.dfa-zone-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.dfa-zone .dfa-info {
+  margin-left: auto;
+}
+
+.dfa-info summary {
+  list-style: none;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--ck-border);
+  border-radius: 50%;
+  font-size: 0.7rem;
+  color: var(--ck-muted);
+  user-select: none;
+}
+.dfa-info summary::-webkit-details-marker {
+  display: none;
+}
+.dfa-info[open] summary {
+  color: var(--ck-text);
+  border-color: var(--ck-muted);
+}
+
+.dfa-info-panel {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  width: min(17rem, 80vw);
+  padding: 12px 14px;
+  background: #111a2e;
+  border: 1px solid var(--ck-border);
+  border-radius: 10px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  white-space: normal;
+  z-index: 10;
+}
+.dfa-info-panel p {
+  margin: 0 0 8px;
+}
+.dfa-info-panel p:last-child {
+  margin-bottom: 0;
+}
+.dfa-info-panel .metric-note {
+  white-space: normal;
+}
 /* ---------- Slow-metrics strip ---------- */
 .cockpit-strip {
   display: grid;

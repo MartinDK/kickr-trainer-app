@@ -53,16 +53,37 @@ function updateTargetDeviation(actualW, targetW) {
 // DFA a1 gauge: scale 0.25 -> 1.25, so AnT 0.50 = 25% and AeT 0.75 = 50%.
 function updateDfa(value) {
   const marker = $("dfaMarker");
+  const zone = $("dfaZone");
+  const note = $("dfaZoneNote");
   if (value == null || Number.isNaN(value)) {
     marker.classList.add("is-hidden");
     $("dfaA1Display").textContent = "--";
+    zone.textContent = "--";
+    note.textContent = "no data";
     return;
   }
   marker.classList.remove("is-hidden");
   marker.style.left = `${clamp((value - 0.25) / 1.5, 0.02, 0.98) * 100}%`;
   $("dfaA1Display").textContent = value.toFixed(2);
+
+  if (value > 0.75) {
+    zone.textContent = "Easy";
+    note.textContent = "below AeT";
+  } else if (value >= 0.5) {
+    zone.textContent = "Moderate";
+    note.textContent = "AeT to AnT";
+  } else {
+    zone.textContent = "Hard";
+    note.textContent = "past AnT";
+  }
 }
 
+// Close the info panel when clicking elsewhere
+document.addEventListener("click", (e) => {
+  document.querySelectorAll(".dfa-info[open]").forEach((d) => {
+    if (!d.contains(e.target)) d.open = false;
+  });
+});
 // W'bal bar: turns orange below 25%.
 function updateWPrimeBal(balKj, maxKj) {
   $("wPrimeBalDisplay").textContent = balKj.toFixed(1);
