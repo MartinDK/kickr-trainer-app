@@ -26,7 +26,7 @@ function updateInterval(elapsedSeconds, totalSeconds) {
   }
   const remaining = Math.max(0, totalSeconds - elapsedSeconds);
   $("intervalLabel").textContent = "Interval remaining";
-  $("intervalTimeDisplay").textContent = formatClock(remaining);
+  $("intervalTimeDisplay").textContent = formatClock(Math.ceil(remaining));
   $("intervalProgressFill").style.width =
     `${clamp(elapsedSeconds / totalSeconds, 0, 1) * 100}%`;
   $("intervalSub").textContent = `of ${formatClock(totalSeconds)}`;

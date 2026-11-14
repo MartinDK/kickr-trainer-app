@@ -24,7 +24,7 @@ import {
   targetSummary,
   writeControlBytes,
 } from "./trainer.js";
-import { applyWorkoutTarget } from "./workout.js";
+import { applyWorkoutTarget, workoutValueAt } from "./workout.js";
 import { currentDfaAlpha1, renderHrv } from "./hrv.js";
 import { drawPowerChart } from "./charts.js";
 import { renderPowerMetrics, updatePowerMetrics } from "./metrics.js";
@@ -508,9 +508,16 @@ export function renderLive(now = Date.now()) {
 
   $("totalTimeDisplay").textContent = formatTime(ride.seconds);
 
-  const intervalTotalSeconds = null; // temporary
-  updateInterval(ride.intervalSeconds, intervalTotalSeconds);
+  let intervalElapsed = ride.intervalSeconds;
+  let intervalTotal = null; // null = lap timer (free ride / manual control)
 
+  if (ride.targetSource === "workout") {
+    const info = workoutValueAt(workout.elapsed);
+    const start = info.segmentStart ?? workout.elapsed - ride.intervalSeconds;
+    intervalElapsed = workout.elapsed - start;
+    intervalTotal = info.segmentEnd - start;
+  }
+  updateInterval(intervalElapsed, intervalTotal);
   renderPowerMetrics();
   renderHrv(now);
   drawPowerChart();
