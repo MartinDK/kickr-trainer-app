@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0f172a" />
     <title>Wahoo Smart Trainer Control Dashboard</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="./src/styles/styles.css" />
   </head>
   <body class="app-body">
     <!-- Header: brand + device connections (first step of every session) -->
@@ -101,14 +101,7 @@
         <!-- Trainer control -->
         <section class="dashboard-card" aria-labelledby="trainerControlTitle">
           <div class="card-header">
-            <div class="card-heading-group">
-              <h2 id="trainerControlTitle" class="card-title">
-                Trainer control
-              </h2>
-              <p id="controlStatus" class="control-status">
-                Trainer not connected.
-              </p>
-            </div>
+            <h2 class="card-title">Trainer Control</h2>
           </div>
 
           <div
@@ -342,31 +335,85 @@
                 <label class="form-label" for="simWeightInput"
                   >Rider + Bike Weight (kg)</label
                 >
-                <input
-                  type="number"
-                  id="simWeightInput"
-                  value="75"
-                  min="30"
-                  max="150"
-                  step="1"
-                  inputmode="decimal"
-                  class="form-input"
-                />
+                <div class="number-input-wrapper">
+                  <input
+                    type="number"
+                    id="simWeightInput"
+                    value="75"
+                    min="30"
+                    max="150"
+                    class="form-input"
+                  />
+                  <div class="custom-stepper">
+                    <button
+                      type="button"
+                      tabindex="-1"
+                      onclick="
+                        document.getElementById('simWeightInput').stepUp();
+                        document
+                          .getElementById('simWeightInput')
+                          .dispatchEvent(new Event('input'));
+                      "
+                    >
+                      &#9650;
+                    </button>
+                    <button
+                      type="button"
+                      tabindex="-1"
+                      onclick="
+                        document.getElementById('simWeightInput').stepDown();
+                        document
+                          .getElementById('simWeightInput')
+                          .dispatchEvent(new Event('input'));
+                      "
+                    >
+                      &#9660;
+                    </button>
+                  </div>
+                </div>
               </div>
               <div class="form-field">
                 <label class="form-label" for="simCrrInput"
                   >Rolling Resistance (Crr)</label
                 >
-                <input
-                  type="number"
-                  id="simCrrInput"
-                  value="0.004"
-                  min="0.001"
-                  max="0.02"
-                  step="0.001"
-                  inputmode="decimal"
-                  class="form-input"
-                />
+                <div class="number-input-wrapper">
+                  <input
+                    type="number"
+                    id="simCrrInput"
+                    value="0.004"
+                    min="0.001"
+                    max="0.02"
+                    step="0.001"
+                    inputmode="decimal"
+                    class="form-input"
+                  />
+                  <div class="custom-stepper">
+                    <button
+                      type="button"
+                      tabindex="-1"
+                      onclick="
+                        document.getElementById('simWeightInput').stepUp();
+                        document
+                          .getElementById('simWeightInput')
+                          .dispatchEvent(new Event('input'));
+                      "
+                    >
+                      &#9650;
+                    </button>
+                    <button
+                      type="button"
+                      tabindex="-1"
+                      onclick="
+                        document.getElementById('simWeightInput').stepDown();
+                        document
+                          .getElementById('simWeightInput')
+                          .dispatchEvent(new Event('input'));
+                      "
+                    >
+                      &#9660;
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
             <div class="form-field">
@@ -449,6 +496,14 @@
               >
                 Save CSV
               </button>
+              <button
+                id="btn-upload-intervals"
+                type="button"
+                class="button button--ghost button--small"
+                title="Upload ride to Intervals.icu (free account supported)"
+              >
+                Intervals.icu
+              </button>
             </div>
           </div>
 
@@ -473,14 +528,84 @@
                 class="file-picker-input"
               />
             </label>
+            <label class="terminal-toggle-label" style="margin-left: auto">
+              <input
+                type="checkbox"
+                id="audioCuesToggle"
+                class="terminal-toggle-input"
+                checked
+              />
+              <span>Audio cues</span>
+            </label>
           </div>
 
           <div class="stat-grid">
+            <div class="stat-tile stat-tile--with-input">
+              <div class="form-field">
+                <label class="stat-label" for="ftpInput">RIDER FTP</label>
+                <div class="preset-input-wrapper">
+                  <input
+                    type="number"
+                    id="ftpInput"
+                    class="preset-input"
+                    min="155"
+                    max="300"
+                    step="1"
+                    inputmode="numeric"
+                    value="236"
+                    aria-label="Rider FTP in Watts"
+                  />
+                  <div class="preset-stepper">
+                    <button type="button" tabindex="-1" id="ftpIncBtn">
+                      ▲
+                    </button>
+                    <button type="button" tabindex="-1" id="ftpDecBtn">
+                      ▼
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <span class="stat-unit">W</span>
+            </div>
+            <div class="stat-tile stat-tile--with-input">
+              <div class="form-field">
+                <label class="stat-label" for="wPrimeInput">W' CAPACITY</label>
+                <!-- W' Capacity Card -->
+                <div class="preset-input-wrapper">
+                  <input
+                    type="number"
+                    id="wPrimeInput"
+                    class="preset-input"
+                    min="5000"
+                    max="40000"
+                    step="500"
+                    value="19000"
+                  />
+                  <div class="preset-stepper">
+                    <button
+                      type="button"
+                      id="wPrimeIncBtn"
+                      aria-label="Increase W'"
+                    >
+                      ▲
+                    </button>
+                    <button
+                      type="button"
+                      id="wPrimeDecBtn"
+                      aria-label="Decrease W'"
+                    >
+                      ▼
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <span class="stat-unit">J</span>
+            </div>
             <div class="stat-tile">
               <span class="stat-label">ELAPSED / TOTAL</span>
               <span class="stat-value"
-                ><span id="workoutCurrentTime">00:00</span> /
-                <span id="workoutTotalTime">00:00</span></span
+                ><span id="workoutCurrentTime">--:--</span> /
+                <span id="workoutTotalTime">--:--</span></span
               >
             </div>
             <div class="stat-tile">
@@ -490,28 +615,6 @@
                 class="stat-value stat-value--indigo"
                 >-- W</span
               >
-            </div>
-            <div class="stat-tile">
-              <span class="stat-label">INTENSITY</span>
-              <span id="workoutTargetPct" class="stat-value stat-value--emerald"
-                >--% FTP</span
-              >
-            </div>
-            <div class="stat-tile stat-tile--with-input">
-              <div class="form-field">
-                <label class="stat-label" for="ftpInput">RIDER FTP</label>
-                <input
-                  type="number"
-                  id="ftpInput"
-                  value="236"
-                  min="100"
-                  max="500"
-                  step="5"
-                  inputmode="numeric"
-                  class="form-input form-input--compact"
-                />
-              </div>
-              <span class="stat-unit">W</span>
             </div>
           </div>
 
@@ -541,13 +644,6 @@
               >ERG (% FTP)</span
             >
           </div>
-
-          <canvas
-            id="workoutThumbnailCanvas"
-            class="chart-canvas chart-canvas--workout"
-            role="img"
-            aria-label="Workout profile"
-          ></canvas>
         </section>
       </div>
 
@@ -613,17 +709,27 @@
           </article>
 
           <article class="cockpit-tile">
-            <span class="metric-label">Cadence</span>
+            <span class="metric-label">Load &amp; W'bal</span>
             <div class="metric-reading">
               <span
-                id="liveCadenceDisplay"
+                id="tssDisplay"
                 class="metric-value metric-value--hero metric-value--indigo"
-                >--</span
+                >--.--</span
               >
-              <span class="metric-unit">RPM</span>
+              <span class="metric-unit">TSS</span>
             </div>
             <div class="metric-secondary">
-              <span id="cadenceSub" class="metric-note">&nbsp;</span>
+              <span class="metric-label">NP</span>
+              <span id="npDisplay" class="metric-value metric-value--small"
+                >--</span
+              >
+              <span class="metric-note">W &middot; W'bal</span>
+              <span
+                id="wPrimeBalDisplay"
+                class="metric-value metric-value--small metric-value--emerald"
+                >20.0</span
+              >
+              <span class="metric-note">kJ</span>
             </div>
           </article>
 
@@ -658,13 +764,16 @@
               >
             </div>
             <div class="time-readout time-readout--interval">
-              <span class="metric-label">Interval</span>
+              <span class="metric-label">Cadence / Int</span>
               <span
-                id="intervalTimeDisplay"
                 class="metric-value metric-value--medium metric-value--amber"
-                >00:00</span
               >
+                <span id="liveCadenceDisplay">--</span>
+                <span style="font-size: 0.7em">rpm</span> &middot;
+                <span id="intervalTimeDisplay">00:00</span>
+              </span>
             </div>
+            <span id="cadenceSub" class="metric-note is-hidden">&nbsp;</span>
           </article>
         </div>
       </section>
@@ -673,13 +782,7 @@
       <section class="dashboard-card" aria-labelledby="powerTrendTitle">
         <div class="card-header">
           <div class="card-heading-group">
-            <h2 id="powerTrendTitle" class="card-title">
-              Power &amp; HR trend
-            </h2>
-            <p class="card-subtitle">
-              Last 5 minutes. Power: Cycling Power (0x2A63), trainer vs pedals.
-              HR / RR: Heart Rate (0x2A37). Power figures are 3 s averages.
-            </p>
+            <h2 id="powerTrendTitle" class="card-title">Live Telemetry</h2>
           </div>
           <div class="chart-legend">
             <span class="chart-legend-item"
@@ -699,6 +802,16 @@
                 class="chart-legend-swatch chart-legend-swatch--target"
               ></span
               >ERG target</span
+            >
+            <span class="chart-legend-item"
+              ><span
+                class="chart-legend-swatch"
+                style="
+                  background-color: rgba(99, 102, 241, 0.25);
+                  border: 1px solid #6366f1;
+                "
+              ></span
+              >Workout profile</span
             >
             <span class="chart-legend-item"
               ><span
@@ -723,7 +836,7 @@
           id="powerChart"
           class="chart-canvas chart-canvas--power"
           role="img"
-          aria-label="Power and Heart Rate over the last five minutes"
+          aria-label="Training Data: Power, Workout Profile, and Heart Rate"
         ></canvas>
       </section>
 
@@ -828,11 +941,11 @@
         </div>
       </section>
 
-      <!-- 5. Diagnostics: collapsed by default, not needed while riding -->
+      <!-- 5. Diagnostics & Intervals.icu Settings -->
       <details id="diagnosticsPanel" class="dashboard-card diagnostics-panel">
         <summary class="diagnostics-summary">
           <span class="diagnostics-summary-title"
-            >Bluetooth log and diagnostics</span
+            >Bluetooth log, Intervals.icu &amp; diagnostics</span
           >
           <span class="diagnostics-summary-meta">
             Device:
@@ -846,6 +959,76 @@
           </span>
         </summary>
         <div class="diagnostics-body">
+          <!-- Intervals.icu free API integration -->
+          <div class="bluetooth-profile" style="margin-bottom: 1rem">
+            <div class="bluetooth-profile-header">
+              <h3 class="bluetooth-profile-title">
+                Intervals.icu Sync (Free Account API)
+              </h3>
+              <span class="bluetooth-profile-service"
+                >POST /api/v1/athlete/{id}/activities</span
+              >
+            </div>
+            <p class="card-subtitle" style="margin-bottom: 0.75rem">
+              Find your Athlete ID (e.g. <code>i12345</code>) and API Key under
+              <strong>Settings &rarr; Developer Settings</strong> in
+              Intervals.icu. Stored locally in your browser only.
+            </p>
+            <form onsubmit="return false;">
+              <div class="form-grid">
+                <div class="form-field">
+                  <label class="form-label" for="intervalsAthleteId"
+                    >Athlete ID</label
+                  >
+                  <input
+                    type="text"
+                    id="intervalsAthleteId"
+                    placeholder="i12345 or 0"
+                    class="form-input"
+                    autocomplete="username"
+                  />
+                </div>
+                <div class="form-field">
+                  <label class="form-label" for="intervalsApiKey"
+                    >API Key</label
+                  >
+                  <input
+                    type="password"
+                    id="intervalsApiKey"
+                    placeholder="Paste Intervals.icu API key"
+                    class="form-input"
+                    autocomplete="current-password"
+                  />
+                </div>
+              </div>
+            </form>
+
+            <div
+              style="
+                margin-top: 0.75rem;
+                display: flex;
+                gap: 0.5rem;
+                align-items: center;
+              "
+            >
+              <button
+                id="btn-save-intervals"
+                type="button"
+                class="button button--secondary button--small"
+              >
+                Save Credentials
+              </button>
+              <button
+                id="btn-sync-intervals-now"
+                type="button"
+                class="button button--primary button--small"
+              >
+                Upload Current Ride Now
+              </button>
+              <span id="intervalsStatusMsg" class="metric-note"></span>
+            </div>
+          </div>
+
           <div class="terminal">
             <div class="terminal-header">
               <div class="terminal-title-group">
@@ -953,6 +1136,6 @@
         </div>
       </div>
     </div>
-    <script src="demo2.js"></script>
+    <script type="module" src="./src/main.js"></script>
   </body>
 </html>
