@@ -14,13 +14,7 @@ import {
   telemetry,
   workout,
 } from "./state.js";
-import { hideModal, log, showModal } from "./ui/ui.js";
-import {
-  updateInterval,
-  updateTargetDeviation,
-  updateDfa,
-  updateWPrimeBal,
-} from "./ui/cockpit.js";
+import { withBusy, hideModal, log, showModal } from "./ui/ui.js";
 import { renderHrv } from "./hrv.js";
 import { drawPowerChart } from "./charts.js";
 import {
@@ -290,8 +284,11 @@ $("btn-stop-workout").addEventListener("click", () => {
   stopWorkout();
   log("Workout stopped and rewound.", "info");
 });
+const uploadBtn = $("btn-upload-intervals");
+uploadBtn.addEventListener("click", () =>
+  withBusy(uploadBtn, "Uploading...", uploadToIntervalsIcu),
+);
 $("btn-save-csv-workout").addEventListener("click", saveWorkoutCsv);
-$("btn-upload-intervals").addEventListener("click", uploadToIntervalsIcu);
 $("btn-save-intervals").addEventListener("click", saveIntervalsCredentials);
 $("btn-sync-intervals-now").addEventListener("click", uploadToIntervalsIcu);
 

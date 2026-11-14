@@ -5,6 +5,21 @@ export const shouldLogPackets = () => {
   return toggle ? toggle.checked : false;
 };
 
+export async function withBusy(button, busyLabel, task) {
+  const original = button.textContent;
+  button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  button.textContent = busyLabel;
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  try {
+    return await task();
+  } finally {
+    button.disabled = false;
+    button.removeAttribute("aria-busy");
+    button.textContent = original;
+  }
+}
+
 export function log(message, type = "system") {
   const output = $("terminalLog");
   if (!output) return;
