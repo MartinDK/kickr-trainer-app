@@ -1,4 +1,3 @@
-// ui.js — Terminal logging and modal dialog helpers
 import { $, runtime } from "./state.js";
 
 export const shouldLogPackets = () => {

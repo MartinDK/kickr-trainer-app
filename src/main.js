@@ -1,6 +1,7 @@
-// main.js — Application entry point, event wiring, and 1-second tick loop
 import {
   $,
+  FTP_RANGE,
+  WPRIME_RANGE,
   HRV_WINDOWS,
   MODES,
   clamp,
@@ -37,7 +38,6 @@ import {
   saveWorkoutCsv,
   setWorkoutMode,
   stopWorkout,
-  parseWorkoutFile,
 } from "./workout.js";
 import {
   connectDevice,
@@ -50,7 +50,6 @@ import {
 } from "./bluetooth.js";
 import {
   configuredWPrime,
-  currentFtp,
   renderPowerMetrics,
   resetPowerMetrics,
 } from "./metrics.js";
@@ -112,6 +111,8 @@ function setupStepperInput({
 
   if (!input) return;
 
+  input.addEventListener("change", () => commit(input.value));
+
   const getBounds = () => ({
     val: parseInt(input.value, 10) || getFallback(),
     min: parseInt(input.min, 10) || 0,
@@ -119,19 +120,23 @@ function setupStepperInput({
     step: parseInt(input.step, 10) || 1,
   });
 
+  let last = null; // last value passed to onCommit
+
   const commit = (rawVal) => {
     const { min, max } = getBounds();
     const parsed = parseInt(rawVal, 10);
 
     if (isNaN(parsed)) {
       input.value = getFallback();
-    } else {
-      const clamped = Math.max(min, Math.min(max, parsed));
-      input.value = clamped;
-      onCommit(clamped);
+      return;
     }
-  };
 
+    const clamped = Math.max(min, Math.min(max, parsed));
+    input.value = clamped;
+    if (clamped === last) return; // nothing changed, skip (stops the Enter + blur double commit)
+    last = clamped;
+    onCommit(clamped);
+  };
   if (incBtn) {
     incBtn.addEventListener("click", () => {
       const { val, max, step } = getBounds();
@@ -155,31 +160,41 @@ function setupStepperInput({
   });
 }
 
-// --- Wire up Rider FTP ---
+// --- Wire up Rider ---
+
+function applyFtp(n) {
+  workout.ftp = n;
+  store.set("ftp", n);
+  workout.lastSent = ""; // forces ERG to re-send %FTP targets
+  renderWorkout();
+  drawPowerChart();
+}
+
+function applyWPrime(n) {
+  workout.wPrime = n;
+  store.set("wPrime", n);
+  if (telemetry.npSampleCount === 0) {
+    // only re-seed before the ride has started
+    telemetry.wPrimeBalance = n;
+    renderPowerMetrics();
+  }
+}
+
 setupStepperInput({
   inputId: "ftpInput",
   incBtnId: "ftpIncBtn",
   decBtnId: "ftpDecBtn",
   getFallback: () => workout.ftp || 250,
-  onCommit: (newFtp) => {
-    workout.ftp = newFtp;
-    localStorage.setItem("user_ftp", newFtp);
-    drawPowerChart();
-  },
+  onCommit: applyFtp,
 });
 
-// --- Wire up W' Capacity ---
 setupStepperInput({
   inputId: "wPrimeInput",
   incBtnId: "wPrimeIncBtn",
   decBtnId: "wPrimeDecBtn",
   getFallback: () => workout.wPrime || 19000,
-  onCommit: (newWPrime) => {
-    workout.wPrime = newWPrime;
-    localStorage.setItem("user_wprime", newWPrime);
-  },
+  onCommit: applyWPrime,
 });
-
 MODES.forEach((mode) =>
   $("tab-" + mode).addEventListener("click", () => selectModeTab(mode)),
 );
@@ -258,7 +273,7 @@ $("workoutFileInput").addEventListener("change", (event) => {
   const file = event.target.files[0];
   if (file) {
     loadWorkoutFile(file);
-    drawPowerChart(); // <-- Add this line right here
+    drawPowerChart();
   }
   event.target.value = "";
 });
@@ -276,24 +291,6 @@ $("btn-sync-intervals-now").addEventListener("click", uploadToIntervalsIcu);
 
 $("btnModeErg").addEventListener("click", () => setWorkoutMode("erg"));
 $("btnModeRes").addEventListener("click", () => setWorkoutMode("res"));
-
-$("ftpInput").addEventListener("input", () => {
-  const entered = Number($("ftpInput").value);
-  if (entered >= 50 && entered <= 600) store.set("ftp", entered);
-  workout.lastSent = "";
-  renderWorkout();
-});
-
-$("wPrimeInput").addEventListener("input", () => {
-  const entered = Number($("wPrimeInput").value);
-  if (entered >= 5000 && entered <= 50000) {
-    store.set("wPrime", entered);
-    if (telemetry.npSampleCount === 0) {
-      telemetry.wPrimeBalance = entered;
-      renderPowerMetrics();
-    }
-  }
-});
 
 HRV_WINDOWS.forEach((seconds) => {
   const winBtn = $("win-" + seconds);
@@ -326,34 +323,44 @@ document.addEventListener("keydown", (event) => {
 document.addEventListener("visibilitychange", keepScreenAwake);
 window.addEventListener("resize", () => {
   drawPowerChart();
-  drawWorkoutChart(currentFtp());
+  // drawWorkoutChart(currentFtp());
 });
 
 // ============================================================
 // INITIAL RENDER & TICK LOOP
 // ============================================================
+$("ftpInput").min = FTP_RANGE.min;
+$("ftpInput").max = FTP_RANGE.max;
+$("wPrimeInput").min = WPRIME_RANGE.min;
+$("wPrimeInput").max = WPRIME_RANGE.max;
 
-// Load saved values on startup
-const savedFtp = localStorage.getItem("user_ftp");
-if (savedFtp) {
-  workout.ftp = parseInt(savedFtp, 10);
-  const ftpInput = $("ftpInput");
-  if (ftpInput) ftpInput.value = savedFtp;
+function loadSetting(name, legacyKey, range) {
+  const valid = (n) => Number.isFinite(n) && n >= range.min && n <= range.max;
+  let n = Number(store.get(name, null));
+  if (!valid(n)) {
+    try {
+      n = parseInt(localStorage.getItem(legacyKey), 10);
+    } catch {
+      n = NaN;
+    }
+  }
+  return valid(n) ? n : range.fallback;
 }
 
-const savedWPrime = localStorage.getItem("user_wprime");
-if (savedWPrime) {
-  workout.wPrime = parseInt(savedWPrime, 10);
-  const wPrimeInput = $("wPrimeInput");
-  if (wPrimeInput) wPrimeInput.value = savedWPrime;
-}
-
+workout.ftp = loadSetting("ftp", "user_ftp", FTP_RANGE);
+workout.wPrime = loadSetting("wPrime", "user_wprime", WPRIME_RANGE);
+store.set("ftp", workout.ftp);
+store.set("wPrime", workout.wPrime);
+$("ftpInput").value = workout.ftp;
+$("wPrimeInput").value = workout.wPrime;
 telemetry.wPrimeBalance = configuredWPrime();
+
 loadIntervalsCredentials();
 
 Object.keys(sliders).forEach(renderSlider);
 Object.keys(presets).forEach(renderPresets);
 Object.keys(devices).forEach(renderDevice);
+
 setHrvWindow(telemetry.hrvWindow);
 setWorkoutMode("erg", true);
 setTarget("erg", Number(sliders.erg.slider.value));
@@ -374,18 +381,22 @@ if (!navigator.bluetooth) {
 }
 
 let lastTickAt = Date.now();
-function tick() {
-  const now = Date.now();
-  const elapsedSeconds = clamp((now - lastTickAt) / 1000, 0, 90);
-  lastTickAt = now;
-  if (Object.values(devices).some((d) => d.state === "connected")) {
-    ride.seconds += elapsedSeconds;
-    ride.intervalSeconds += elapsedSeconds;
-  }
-  advanceWorkout(elapsedSeconds);
-  generateDemoData(now);
-  recordHistorySample(now, elapsedSeconds);
-  renderLive(now);
-}
 
+function tick() {
+  try {
+    const now = Date.now();
+    const elapsedSeconds = clamp((now - lastTickAt) / 1000, 0, 90);
+    lastTickAt = now;
+    if (Object.values(devices).some((d) => d.state === "connected")) {
+      ride.seconds += elapsedSeconds;
+      ride.intervalSeconds += elapsedSeconds;
+    }
+    advanceWorkout(elapsedSeconds);
+    generateDemoData(now);
+    recordHistorySample(now, elapsedSeconds);
+    renderLive(now);
+  } catch (err) {
+    console.error("tick failed", err);
+  }
+}
 setInterval(tick, 1000);

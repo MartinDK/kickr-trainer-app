@@ -117,6 +117,9 @@ export const ride = {
   startedAt: null,
 };
 
+export const FTP_RANGE = { min: 50, max: 350, fallback: 250 };
+export const WPRIME_RANGE = { min: 5000, max: 50000, fallback: 19000 };
+
 export const workout = {
   points: [],
   unit: "percent",
@@ -128,6 +131,8 @@ export const workout = {
   segment: -1,
   lastSent: "",
   lastCountdownSec: -1,
+  ftp: FTP_RANGE.fallback,
+  wPrime: WPRIME_RANGE.fallback,
 };
 
 export const telemetry = {
@@ -149,7 +154,7 @@ export const telemetry = {
   npSampleCount: 0,
   normalizedPower: null,
   tss: 0,
-  wPrimeBalance: 20000,
+  wPrimeBalance: WPRIME_RANGE.fallback,
 };
 
 export const demo = { heartRate: 105, beatClock: 0, nextRr: 570, rrDrift: 0 };
