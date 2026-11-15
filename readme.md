@@ -1,3 +1,7 @@
+# ReadMe
+
+## version 22
+
 TODO : interface updates:
 
 - **Advanced Notifications & File Handling:** Implement persistent notifications for workout completion and interval finishes that do not disappear upon the first click. Add options within these notifications to "Save to CSV" and "Send to Intervals.icu."
