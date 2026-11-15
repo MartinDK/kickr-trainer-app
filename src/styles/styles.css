@@ -639,7 +639,7 @@ button {
 
 .card-subtitle {
   margin-top: 0.125rem;
-  font-size: 0.75rem;
+  font-size: 0.95rem;
   line-height: 1.45;
   color: var(--color-text-secondary);
 }
