@@ -28,9 +28,9 @@
   --font-mono:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
     monospace;
-  --radius-card: 1rem;
+  --radius-card: 0.225rem;
   --radius-tile: 0.75rem;
-  --radius-control: 0.625rem;
+  --radius-control: 0.225rem;
   --layout-gap: 1rem;
 }
 
@@ -742,7 +742,6 @@ button {
 .toggle-group {
   display: inline-flex;
   gap: 0.1875rem;
-  padding: 0.1875rem;
   background-color: var(--color-inset);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-control);
@@ -756,7 +755,7 @@ button {
   color: var(--color-text-secondary);
   background-color: transparent;
   border: 0;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-control);
   transition:
     background-color 0.15s ease,
     color 0.15s ease;
@@ -810,10 +809,9 @@ button {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.25rem;
-  padding: 0.25rem;
   background-color: var(--color-inset);
   border: 1px solid var(--color-border);
-  border-radius: 0.875rem;
+  border-radius: var(--radius-control);
 }
 
 .mode-tab-button {
@@ -936,7 +934,6 @@ button {
 .slider-block {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
 }
 
 .range-slider {
@@ -1021,7 +1018,7 @@ button {
   min-height: 2.75rem;
   padding: 0.25rem;
   font-family: var(--font-mono);
-  font-size: 1.1125rem;
+  font-size: 1.0125rem;
   font-weight: 700;
   text-align: center;
   border-radius: var(--radius-control);
@@ -1213,7 +1210,7 @@ button {
 
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.5rem;
 }
 
@@ -1504,9 +1501,10 @@ button {
   align-items: center;
   gap: 0.375rem;
   min-height: 2rem;
-  font-size: 0.6875rem;
+  font-size: 1rem;
   color: var(--color-text-secondary);
   cursor: pointer;
+  margin: auto;
   user-select: none;
 }
 

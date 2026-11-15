@@ -125,7 +125,7 @@
               class="mode-tab-button"
               aria-pressed="false"
             >
-              Resistance (%)
+              Resistance
             </button>
             <button
               id="tab-level"
@@ -133,7 +133,7 @@
               class="mode-tab-button"
               aria-pressed="false"
             >
-              Level Resistance
+              Levels
             </button>
             <button
               id="tab-sim"
@@ -149,9 +149,6 @@
           <div id="panel-erg" class="mode-panel">
             <div>
               <h3 class="mode-panel-title">Constant Wattage (ERG)</h3>
-              <p class="mode-panel-description">
-                Trainer holds target power regardless of cadence.
-              </p>
             </div>
             <div class="target-stepper">
               <button
@@ -529,15 +526,6 @@
                 class="file-picker-input"
               />
             </label>
-            <label class="terminal-toggle-label" style="margin-left: auto">
-              <input
-                type="checkbox"
-                id="audioCuesToggle"
-                class="terminal-toggle-input"
-                checked
-              />
-              <span>Audio cues</span>
-            </label>
           </div>
 
           <div class="stat-grid">
@@ -603,19 +591,15 @@
               <span class="stat-unit">J</span>
             </div>
             <div class="stat-tile">
-              <span class="stat-label">ELAPSED / TOTAL</span>
-              <span class="stat-value"
-                ><span id="workoutCurrentTime">--:--</span> /
-                <span id="workoutTotalTime">--:--</span></span
-              >
-            </div>
-            <div class="stat-tile">
-              <span class="stat-label">TARGET VALUE</span>
-              <span
-                id="workoutTargetWatts"
-                class="stat-value stat-value--indigo"
-                >-- W</span
-              >
+              <label class="terminal-toggle-label" style="margin-left: auto">
+                <input
+                  type="checkbox"
+                  id="audioCuesToggle"
+                  class="terminal-toggle-input"
+                  checked
+                />
+                <span>Audio</span>
+              </label>
             </div>
           </div>
 
