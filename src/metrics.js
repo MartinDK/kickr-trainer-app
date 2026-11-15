@@ -1,13 +1,12 @@
 // metrics.js — Real-time Normalized Power (NP), TSS, and W' Balance (Skiba model)
 import { $, average, clamp, ride, telemetry } from "./state.js";
+import { updateWPrimeBal } from "./ui/cockpit.js";
 
 export function currentFtp() {
   const input = $("ftpInput");
   if (!input) return 236;
   const entered = Number(input.value);
-  return entered >= 50 && entered <= 600
-    ? entered
-    : Number(input.defaultValue);
+  return entered >= 50 && entered <= 600 ? entered : Number(input.defaultValue);
 }
 
 export function configuredWPrime() {
@@ -78,7 +77,8 @@ export function updatePowerMetrics(watts, elapsedSeconds = 1) {
     const dCp = ftp - watts;
     const tau = 546 * Math.exp(-0.01 * dCp) + 316;
     const recovery =
-      (wPrimeMax - telemetry.wPrimeBalance) * (1 - Math.exp(-elapsedSeconds / tau));
+      (wPrimeMax - telemetry.wPrimeBalance) *
+      (1 - Math.exp(-elapsedSeconds / tau));
     telemetry.wPrimeBalance = clamp(
       telemetry.wPrimeBalance + recovery,
       0,
@@ -86,11 +86,9 @@ export function updatePowerMetrics(watts, elapsedSeconds = 1) {
     );
   }
 }
-
 export function renderPowerMetrics() {
   const tssEl = $("tssDisplay");
   const npEl = $("npDisplay");
-  const wBalEl = $("wPrimeBalDisplay");
 
   if (tssEl) tssEl.textContent = telemetry.tss.toFixed(1);
   if (npEl) {
@@ -99,13 +97,8 @@ export function renderPowerMetrics() {
         ? Math.round(telemetry.normalizedPower)
         : "--";
   }
-  if (wBalEl) {
-    const wMax = configuredWPrime();
-    const bal = clamp(telemetry.wPrimeBalance, 0, wMax);
-    wBalEl.textContent = (bal / 1000).toFixed(1);
-    const ratio = wMax > 0 ? bal / wMax : 1;
-    wBalEl.classList.toggle("metric-value--emerald", ratio > 0.4);
-    wBalEl.classList.toggle("metric-value--amber", ratio <= 0.4 && ratio > 0.15);
-    wBalEl.classList.toggle("metric-value--rose", ratio <= 0.15);
-  }
+
+  const wMax = configuredWPrime();
+  const bal = clamp(telemetry.wPrimeBalance, 0, wMax);
+  updateWPrimeBal(bal / 1000, wMax / 1000);
 }

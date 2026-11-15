@@ -1,0 +1,473 @@
+/* ---------- Tokens (one colour per meaning) ---------- */
+.ride-cockpit {
+  --ck-tile: #0d1424;
+  --ck-border: #1d2842;
+  --ck-text: #e8edf7;
+  --ck-muted: #8793ad;
+  --ck-track: #1a2338;
+
+  --ck-amber: #fbbf24; /* pedal power */
+  --ck-emerald: #34d399; /* Kickr power */
+  --ck-rose: #fb7185; /* heart rate  */
+  --ck-violet: #a78bfa; /* DFA a1      */
+  --ck-cyan: #22d3ee; /* W'bal       */
+  --ck-lime: #a3e635; /* cadence     */
+  --ck-warn: #f97316; /* W'bal low   */
+
+  --ck-mono: var(
+    --font-mono,
+    ui-monospace,
+    "JetBrains Mono",
+    "SF Mono",
+    Menlo,
+    Consolas,
+    monospace
+  );
+  color: var(--ck-text);
+}
+
+/* ---------- Grid ---------- */
+.cockpit-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) auto;
+  grid-template-areas:
+    "power interval hr"
+    "power cadence  hr"
+    "strip strip    strip";
+  gap: 12px;
+  min-height: 22rem;
+}
+.cockpit-tile--power {
+  grid-area: power;
+}
+.cockpit-tile--interval {
+  grid-area: interval;
+}
+.cockpit-tile--cadence {
+  grid-area: cadence;
+}
+.cockpit-tile--hr {
+  grid-area: hr;
+}
+.cockpit-strip {
+  grid-area: strip;
+}
+
+.cockpit-tile,
+.cockpit-strip {
+  background: var(--ck-tile);
+  border: 1px solid var(--ck-border);
+  border-radius: 0.225rem;
+  padding: 10px 18px;
+  min-width: 0;
+}
+.cockpit-tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0;
+}
+
+/* ---------- Type ---------- */
+.metric-label {
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ck-muted);
+  white-space: nowrap;
+}
+.metric-label-detail {
+  text-transform: none;
+  letter-spacing: 0;
+}
+.metric-note {
+  font-size: 0.85rem;
+  color: var(--ck-muted);
+  white-space: nowrap;
+}
+.metric-unit {
+  font-size: 0.9rem;
+  color: var(--ck-muted);
+  white-space: nowrap;
+}
+.metric-reading {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35em;
+  min-width: 0;
+}
+.metric-value {
+  font-family: var(--ck-mono);
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.metric-value--hero {
+  font-size: clamp(3.5rem, 8vw, 7.5rem);
+}
+.metric-value--hero-sm {
+  font-size: clamp(3rem, 6vw, 5rem);
+}
+.metric-value--xl {
+  font-size: clamp(2.75rem, 5vw, 4.75rem);
+}
+.metric-value--medium {
+  font-size: clamp(1.25rem, 2.2vw, 1.75rem);
+}
+
+.metric-value--amber {
+  color: var(--ck-amber);
+}
+.metric-value--emerald {
+  color: var(--ck-emerald);
+}
+.metric-value--rose {
+  color: var(--ck-rose);
+}
+.metric-value--violet {
+  color: var(--ck-violet);
+}
+.metric-value--cyan {
+  color: var(--ck-cyan);
+}
+.metric-value--lime {
+  color: var(--ck-lime);
+}
+
+.is-hidden {
+  display: none;
+}
+
+/* ---------- Power tile ---------- */
+.cockpit-tile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.target-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.6em;
+  padding: 6px 14px;
+  border: 1px solid #3a4a80;
+  border-radius: 999px;
+  background: #151d38;
+}
+.target-chip-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #aab6ee;
+}
+.target-chip-value {
+  font-family: var(--ck-mono);
+  font-size: 1.1rem;
+  white-space: nowrap;
+}
+
+.power-hero {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+/* Deviation bar: centre = on target, fill grows left (under) or right (over) */
+.target-deviation {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.target-bar {
+  position: relative;
+  flex: 1;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--ck-track);
+  overflow: hidden;
+}
+.target-bar-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  background: var(--ck-amber);
+  border-radius: 999px;
+  transition:
+    left 0.2s linear,
+    width 0.2s linear;
+}
+.target-bar-tick {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  left: calc(50% - 1px);
+  width: 2px;
+  background: var(--ck-text);
+}
+#targetDeviation {
+  min-width: 7.5ch;
+  text-align: right;
+  font-family: var(--ck-mono);
+}
+
+.power-secondary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ck-border);
+}
+.power-readout {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* ---------- Interval / progress bars ---------- */
+.cockpit-tile--interval,
+.cockpit-tile--cadence {
+  justify-content: center;
+}
+
+.progress-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--ck-track);
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  width: 0;
+  background: var(--ck-text);
+  border-radius: inherit;
+  transition: width 0.3s linear;
+}
+.progress-bar--wbal .progress-bar-fill {
+  background: var(--ck-cyan);
+}
+.progress-bar--wbal.is-low .progress-bar-fill {
+  background: var(--ck-warn);
+}
+
+/* ---------- Heart rate + DFA gauge ---------- */
+.cockpit-tile--hr {
+  justify-content: space-between;
+}
+.dfa {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ck-border);
+}
+.dfa-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+/* Scale 0.25 -> 1.75: AnT 0.50 = 16.67%, AeT 0.75 = 33.33% */
+.dfa-gauge {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #3b2f66 0 16.667%,
+    #28335a 16.667% 33.333%,
+    var(--ck-track) 33.333% 100%
+  );
+}
+.dfa-tick {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--ck-muted);
+}
+.dfa-tick--ant {
+  left: 16.667%;
+  opacity: 0.6;
+}
+.dfa-tick--aet {
+  left: 33.333%;
+  background: var(--ck-text);
+}
+
+.dfa-scale {
+  position: relative;
+  height: 2.2em;
+  font-size: 0.65rem;
+  color: var(--ck-muted);
+}
+.dfa-scale-label {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  text-align: center;
+  line-height: 1.2;
+  white-space: nowrap;
+  font-size: 1.2em;
+}
+.dfa-scale-label--ant {
+  left: 16.667%;
+}
+.dfa-scale-label--aet {
+  left: 33.333%;
+}
+
+.dfa-marker {
+  position: absolute;
+  top: -4px;
+  width: 6px;
+  height: 18px;
+  margin-left: -3px;
+  border-radius: 3px;
+  background: var(--ck-violet);
+  box-shadow: 0 0 0 2px var(--ck-tile);
+  transition: left 0.3s linear;
+}
+.dfa-zone {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 1.4em;
+}
+.dfa-zone-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.dfa-zone .dfa-info {
+  margin-left: auto;
+}
+
+.dfa-info summary {
+  list-style: none;
+  cursor: pointer;
+  width: 35px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 25%;
+  background: rgba(167, 139, 250, 0.18);
+  border: 1px solid var(--ck-violet);
+  color: var(--ck-violet);
+  font-size: 0.8rem;
+  font-weight: 700;
+  user-select: none;
+}
+.dfa-info summary::-webkit-details-marker {
+  display: none;
+}
+.dfa-info summary:hover,
+.dfa-info[open] summary {
+  background: var(--ck-violet);
+  color: #0d1424;
+}
+
+.dfa-info-panel {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  width: min(17rem, 80vw);
+  padding: 12px 14px;
+  background: #141d33;
+  border: 1px solid #2a3a5e;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  z-index: 10;
+  font-size: 0.9rem;
+}
+.dfa-info-panel strong {
+  color: var(--ck-violet);
+}
+.dfa-info-intro {
+  margin: 0 0 8px;
+  font-size: 0.72rem;
+  color: var(--ck-muted);
+}
+.dfa-info-rows {
+  margin: 0;
+}
+.dfa-info-rows > div {
+  padding: 8px 0;
+  border-top: 1px solid var(--ck-border);
+}
+.dfa-info-rows dt {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ck-text);
+}
+.dfa-num {
+  font-family: var(--ck-mono);
+  font-weight: 600;
+  color: var(--ck-violet);
+}
+.dfa-info-rows dd {
+  margin: 2px 0 0;
+  font-size: 0.72rem;
+  color: var(--ck-muted);
+} /* ---------- Slow-metrics strip ---------- */
+.cockpit-strip {
+  display: grid;
+  grid-template-columns: repeat(3, auto) 1fr;
+  gap: 32px;
+  align-items: center;
+}
+.strip-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.wbal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.wbal-values {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5em;
+}
+
+/* ---------- Narrow screens ---------- */
+@media (max-width: 760px) {
+  .cockpit-grid {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto;
+    grid-template-areas:
+      "power power"
+      "interval cadence"
+      "hr hr"
+      "strip strip";
+    min-height: 0;
+  }
+  .cockpit-strip {
+    grid-template-columns: repeat(3, auto);
+    gap: 16px 24px;
+  }
+  .strip-item--wbal {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .target-bar-fill,
+  .progress-bar-fill,
+  .dfa-marker {
+    transition: none;
+  }
+}

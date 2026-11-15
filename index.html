@@ -6,6 +6,7 @@
     <meta name="theme-color" content="#0f172a" />
     <title>Wahoo Smart Trainer Control Dashboard</title>
     <link rel="stylesheet" href="./src/styles/styles.css" />
+    <link rel="stylesheet" href="./src/styles/cockpit.css" />
   </head>
   <body class="app-body">
     <!-- Header: brand + device connections (first step of every session) -->
@@ -124,7 +125,7 @@
               class="mode-tab-button"
               aria-pressed="false"
             >
-              Resistance (%)
+              Resistance
             </button>
             <button
               id="tab-level"
@@ -132,7 +133,7 @@
               class="mode-tab-button"
               aria-pressed="false"
             >
-              Level Resistance
+              Levels
             </button>
             <button
               id="tab-sim"
@@ -148,9 +149,6 @@
           <div id="panel-erg" class="mode-panel">
             <div>
               <h3 class="mode-panel-title">Constant Wattage (ERG)</h3>
-              <p class="mode-panel-description">
-                Trainer holds target power regardless of cadence.
-              </p>
             </div>
             <div class="target-stepper">
               <button
@@ -528,15 +526,6 @@
                 class="file-picker-input"
               />
             </label>
-            <label class="terminal-toggle-label" style="margin-left: auto">
-              <input
-                type="checkbox"
-                id="audioCuesToggle"
-                class="terminal-toggle-input"
-                checked
-              />
-              <span>Audio cues</span>
-            </label>
           </div>
 
           <div class="stat-grid">
@@ -602,19 +591,15 @@
               <span class="stat-unit">J</span>
             </div>
             <div class="stat-tile">
-              <span class="stat-label">ELAPSED / TOTAL</span>
-              <span class="stat-value"
-                ><span id="workoutCurrentTime">--:--</span> /
-                <span id="workoutTotalTime">--:--</span></span
-              >
-            </div>
-            <div class="stat-tile">
-              <span class="stat-label">TARGET VALUE</span>
-              <span
-                id="workoutTargetWatts"
-                class="stat-value stat-value--indigo"
-                >-- W</span
-              >
+              <label class="terminal-toggle-label" style="margin-left: auto">
+                <input
+                  type="checkbox"
+                  id="audioCuesToggle"
+                  class="terminal-toggle-input"
+                  checked
+                />
+                <span>Audio</span>
+              </label>
             </div>
           </div>
 
@@ -650,23 +635,11 @@
       <!-- 1. Live ride cockpit: the numbers a rider checks at a glance -->
       <section class="ride-cockpit" aria-labelledby="rideCockpitTitle">
         <div class="cockpit-grid">
+          <!-- HERO: power vs target -->
           <article class="cockpit-tile cockpit-tile--power">
-            <div class="cockpit-tile-header">
-              <span class="metric-label"
-                >Power <span class="metric-label-detail">(3 s avg)</span></span
-              >
-              <span class="target-chip">
-                <span id="targetModeLabel" class="target-chip-label"
-                  >ERG target</span
-                >
-                <strong id="targetDisplay" class="target-chip-value"
-                  >150 W</strong
-                >
-              </span>
-            </div>
-            <div class="power-readouts">
-              <div class="power-readout">
-                <span class="metric-label">Pedal power</span>
+            <div class="power-hero">
+              <div class="power-top">
+                <span class="metric-label">Pedal Power (3s avg.)</span>
                 <div class="metric-reading">
                   <span
                     id="pedalPowerDisplay"
@@ -679,12 +652,33 @@
                   >not connected</span
                 >
               </div>
+              <div class="power-top">
+                <span class="target-chip">
+                  <span id="targetModeLabel" class="target-chip-label"
+                    >ERG target</span
+                  >
+                  <strong id="targetDisplay" class="target-chip-value"
+                    >150 W</strong
+                  >
+                </span>
+              </div>
+            </div>
+
+            <div class="target-deviation">
+              <div class="target-bar" aria-hidden="true">
+                <div id="targetBarFill" class="target-bar-fill"></div>
+                <span class="target-bar-tick"></span>
+              </div>
+              <span id="targetDeviation" class="metric-note">-- vs target</span>
+            </div>
+
+            <div class="power-secondary">
               <div class="power-readout">
-                <span class="metric-label">Kickr power</span>
+                <span class="metric-label">Kickr Power</span>
                 <div class="metric-reading">
                   <span
                     id="trainerPowerDisplay"
-                    class="metric-value metric-value--hero metric-value--emerald"
+                    class="metric-value metric-value--medium metric-value--emerald"
                     >--</span
                   >
                   <span class="metric-unit">W</span>
@@ -693,12 +687,12 @@
                   >not connected</span
                 >
               </div>
-              <div class="power-readout power-readout--delta">
+              <div class="power-readout">
                 <span class="metric-label">Pedals - Kickr</span>
                 <div class="metric-reading">
                   <span
                     id="deltaDisplay"
-                    class="metric-value metric-value--large"
+                    class="metric-value metric-value--medium"
                     >--</span
                   >
                   <span class="metric-unit">W</span>
@@ -708,73 +702,152 @@
             </div>
           </article>
 
-          <article class="cockpit-tile">
-            <span class="metric-label">Load &amp; W'bal</span>
+          <!-- Interval: remaining time -->
+          <article class="cockpit-tile cockpit-tile--interval">
+            <span id="intervalLabel" class="metric-label"
+              >Interval remaining</span
+            >
             <div class="metric-reading">
               <span
-                id="tssDisplay"
-                class="metric-value metric-value--hero metric-value--indigo"
-                >--.--</span
+                id="intervalTimeDisplay"
+                class="metric-value metric-value--xl"
+                >00:00</span
               >
-              <span class="metric-unit">TSS</span>
             </div>
-            <div class="metric-secondary">
-              <span class="metric-label">NP</span>
-              <span id="npDisplay" class="metric-value metric-value--small"
-                >--</span
-              >
-              <span class="metric-note">W &middot; W'bal</span>
-              <span
-                id="wPrimeBalDisplay"
-                class="metric-value metric-value--small metric-value--emerald"
-                >20.0</span
-              >
-              <span class="metric-note">kJ</span>
+            <div class="progress-bar" aria-hidden="true">
+              <div id="intervalProgressFill" class="progress-bar-fill"></div>
             </div>
+            <span id="intervalSub" class="metric-note">no interval</span>
           </article>
 
-          <article class="cockpit-tile">
+          <!-- Cadence -->
+          <article class="cockpit-tile cockpit-tile--cadence">
+            <span class="metric-label">Cadence</span>
+            <div class="metric-reading">
+              <span
+                id="liveCadenceDisplay"
+                class="metric-value metric-value--xl metric-value--lime"
+                >--</span
+              >
+              <span class="metric-unit">rpm</span>
+            </div>
+            <span id="cadenceSub" class="metric-note is-hidden">&nbsp;</span>
+          </article>
+
+          <!-- Heart rate + DFA a1 gauge -->
+          <article class="cockpit-tile cockpit-tile--hr">
             <span class="metric-label">Heart rate</span>
             <div class="metric-reading">
               <span
                 id="topHrDisplay"
-                class="metric-value metric-value--hero metric-value--rose"
+                class="metric-value metric-value--hero-sm metric-value--rose"
                 >--</span
               >
               <span class="metric-unit">BPM</span>
             </div>
-            <div class="metric-secondary">
-              <span class="metric-label">DFA a1</span>
-              <span
-                id="dfaA1Display"
-                class="metric-value metric-value--small metric-value--indigo"
-                >--</span
-              >
-              <span class="metric-note">(AeT ~0.75)</span>
+
+            <div class="dfa">
+              <div class="dfa-head">
+                <span class="metric-label">DFA a1</span>
+                <span
+                  id="dfaA1Display"
+                  class="metric-value metric-value--medium metric-value--violet"
+                  >--</span
+                >
+              </div>
+
+              <!-- ...gauge and dfa-scale stay as they are... -->
+
+              <div class="dfa-zone">
+                <span id="dfaZone" class="dfa-zone-name">--</span>
+                <span id="dfaZoneNote" class="metric-note">no data</span>
+                <details class="dfa-info">
+                  <summary aria-label="What do AeT and AnT mean?">info</summary>
+                  <div class="dfa-info-panel">
+                    <p>
+                      DFA a1 measures how organised your heartbeat timing is. It
+                      falls as effort rises.
+                    </p>
+                    <p>
+                      <strong>Above 0.75:</strong> easy, below your aerobic
+                      threshold (AeT, the top of zone 2).
+                    </p>
+                    <p>
+                      <strong>0.50 to 0.75:</strong> moderate, between the two
+                      thresholds.
+                    </p>
+                    <p>
+                      <strong>Below 0.50:</strong> hard, beyond your anaerobic
+                      threshold (AnT, close to FTP).
+                    </p>
+                    <p class="metric-note">Values are population averages.</p>
+                  </div>
+                </details>
+              </div>
+              <div class="dfa-gauge" aria-hidden="true">
+                <span class="dfa-tick dfa-tick--ant"></span>
+                <span class="dfa-tick dfa-tick--aet"></span>
+                <span id="dfaMarker" class="dfa-marker is-hidden"></span>
+              </div>
+              <div class="dfa-scale" aria-hidden="true">
+                <span
+                  class="dfa-scale-label dfa-scale-label--ant"
+                  title="Anaerobic threshold, DFA a1 about 0.50"
+                  >AnT</span
+                >
+                <span
+                  class="dfa-scale-label dfa-scale-label--aet"
+                  title="Aerobic threshold, DFA a1 about 0.75"
+                  >AeT</span
+                >
+              </div>
             </div>
           </article>
 
-          <article class="cockpit-tile cockpit-tile--time">
-            <div class="time-readout">
+          <!-- Slow metrics strip -->
+          <div class="cockpit-strip">
+            <div class="strip-item">
               <span class="metric-label">Total time</span>
               <span
                 id="totalTimeDisplay"
-                class="metric-value metric-value--large"
+                class="metric-value metric-value--medium"
                 >00:00</span
               >
             </div>
-            <div class="time-readout time-readout--interval">
-              <span class="metric-label">Cadence / Int</span>
-              <span
-                class="metric-value metric-value--medium metric-value--amber"
+            <div class="strip-item">
+              <span class="metric-label">TSS</span>
+              <span id="tssDisplay" class="metric-value metric-value--medium"
+                >0.0</span
               >
-                <span id="liveCadenceDisplay">--</span>
-                <span style="font-size: 0.7em">rpm</span> &middot;
-                <span id="intervalTimeDisplay">00:00</span>
-              </span>
             </div>
-            <span id="cadenceSub" class="metric-note is-hidden">&nbsp;</span>
-          </article>
+            <div class="strip-item">
+              <span class="metric-label">NP</span>
+              <div class="metric-reading">
+                <span id="npDisplay" class="metric-value metric-value--medium"
+                  >--</span
+                >
+                <span class="metric-unit">W</span>
+              </div>
+            </div>
+            <div class="strip-item strip-item--wbal">
+              <div class="wbal-head">
+                <span class="metric-label">W'bal</span>
+                <span class="wbal-values">
+                  <span
+                    id="wPrimeBalDisplay"
+                    class="metric-value metric-value--medium metric-value--cyan"
+                    >19.5</span
+                  >
+                  <span class="metric-note"
+                    >/ <span id="wPrimeMaxDisplay">19.5</span> kJ</span
+                  >
+                </span>
+              </div>
+              <div class="progress-bar progress-bar--wbal" aria-hidden="true">
+                <div id="wPrimeBalFill" class="progress-bar-fill"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -928,8 +1001,7 @@
         <div class="card-footer">
           <p class="card-footnote">
             RR outside 300-2000 ms, or more than 20% from the previous good
-            beat, is rejected. No differences are taken across a rejected beat.
-            After 5 rejections in a row the reference beat re-syncs.
+            beat, is rejected.
           </p>
           <button
             id="btn-reset-telemetry"
