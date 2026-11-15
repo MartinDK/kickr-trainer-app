@@ -117,17 +117,6 @@ export function applyWorkoutTarget() {
 }
 
 export function renderWorkout() {
-  $("workoutCurrentTime").textContent = formatTime(workout.elapsed);
-  $("workoutTotalTime").textContent = formatTime(workout.duration);
-  if (workout.points.length) {
-    const target = workoutTargetAt(workout.elapsed);
-    $("workoutTargetWatts").textContent =
-      workout.mode === "erg"
-        ? target.watts + " W (" + Math.round(target.percent) + "%)"
-        : target.resistance + " %";
-  } else {
-    $("workoutTargetWatts").textContent = "-- W";
-  }
   drawPowerChart(currentFtp());
 }
 
@@ -268,7 +257,6 @@ export async function loadWorkoutFile(file) {
     log("Could not read " + file.name + ": " + err.message, "error");
     showModal("Could not read workout", err.message);
   }
-  renderWorkout();
 }
 
 export function saveWorkoutCsv() {
