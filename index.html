@@ -637,31 +637,31 @@
         <div class="cockpit-grid">
           <!-- HERO: power vs target -->
           <article class="cockpit-tile cockpit-tile--power">
-            <div class="cockpit-tile-header">
-              <span class="metric-label"
-                >Power <span class="metric-label-detail">(3 s avg)</span></span
-              >
-              <span class="target-chip">
-                <span id="targetModeLabel" class="target-chip-label"
-                  >ERG target</span
-                >
-                <strong id="targetDisplay" class="target-chip-value"
-                  >150 W</strong
-                >
-              </span>
-            </div>
-
             <div class="power-hero">
-              <span class="metric-label">Pedal power</span>
-              <div class="metric-reading">
-                <span
-                  id="pedalPowerDisplay"
-                  class="metric-value metric-value--hero metric-value--amber"
-                  >--</span
+              <div class="power-top">
+                <span class="metric-label">Pedal power</span>
+                <div class="metric-reading">
+                  <span
+                    id="pedalPowerDisplay"
+                    class="metric-value metric-value--hero metric-value--amber"
+                    >--</span
+                  >
+                  <span class="metric-unit">W</span>
+                </div>
+                <span id="pedalPowerSub" class="metric-note"
+                  >not connected</span
                 >
-                <span class="metric-unit">W</span>
               </div>
-              <span id="pedalPowerSub" class="metric-note">not connected</span>
+              <div class="power-top">
+                <span class="target-chip">
+                  <span id="targetModeLabel" class="target-chip-label"
+                    >ERG target</span
+                  >
+                  <strong id="targetDisplay" class="target-chip-value"
+                    >150 W</strong
+                  >
+                </span>
+              </div>
             </div>
 
             <div class="target-deviation">
@@ -762,7 +762,7 @@
                 <span id="dfaZone" class="dfa-zone-name">--</span>
                 <span id="dfaZoneNote" class="metric-note">no data</span>
                 <details class="dfa-info">
-                  <summary aria-label="What do AeT and AnT mean?">?</summary>
+                  <summary aria-label="What do AeT and AnT mean?">info</summary>
                   <div class="dfa-info-panel">
                     <p>
                       DFA a1 measures how organised your heartbeat timing is. It
@@ -780,10 +780,7 @@
                       <strong>Below 0.50:</strong> hard, beyond your anaerobic
                       threshold (AnT, close to FTP).
                     </p>
-                    <p class="metric-note">
-                      Cut-offs are population averages. Yours may sit a little
-                      higher or lower.
-                    </p>
+                    <p class="metric-note">Values are population averages.</p>
                   </div>
                 </details>
               </div>

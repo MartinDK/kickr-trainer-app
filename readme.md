@@ -10,3 +10,4 @@ Summary of Changes Integrated
 4. Add a workout builder page.
 5. Show a ride summary when clicking send to **intervals.icu**
 6. Rider profile - training history (Maybe scraped from intervals api).
+7. Check why DFA 1 isn't uploading to **intervals.icu**
