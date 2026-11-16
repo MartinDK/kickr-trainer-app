@@ -126,7 +126,7 @@ export function setTarget(kind, value, source = "manual") {
   ride.targetSource = source;
   const fromWorkout = source === "workout";
   const labels = {
-    erg: fromWorkout ? "Workout target" : "ERG target",
+    erg: fromWorkout ? "Interval" : "ERG target",
     resistance: fromWorkout ? "Workout resistance" : "Resistance",
     level: "Level",
     sim: "Sim grade",
