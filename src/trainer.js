@@ -337,3 +337,26 @@ export function togglePresetEditing(key) {
     if (firstInput) firstInput.focus();
   }
 }
+export function selectPreset(key, index) {
+  const preset = presets[key];
+  const slider = sliders[key]?.slider;
+  if (!preset || !slider || preset.editing) return;
+  const value = preset.values[index];
+  if (value === undefined) return;
+  slider.value = value;
+  slider.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+export function adjustPreset(key, index, delta) {
+  const preset = presets[key];
+  const slider = sliders[key]?.slider;
+  if (!preset || !slider || preset.editing) return;
+  if (preset.values[index] === undefined) return;
+  preset.values[index] = clamp(
+    preset.values[index] + delta,
+    Number(slider.min),
+    Number(slider.max),
+  );
+  store.set("presets." + key, preset.values);
+  renderPresets(key);
+}
