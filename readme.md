@@ -1,3 +1,7 @@
+# ReadMe
+
+## version 22
+
 TODO : interface updates:
 
 - **Advanced Notifications & File Handling:** Implement persistent notifications for workout completion and interval finishes that do not disappear upon the first click. Add options within these notifications to "Save to CSV" and "Send to Intervals.icu."
@@ -11,3 +15,4 @@ Summary of Changes Integrated
 5. Show a ride summary when clicking send to **intervals.icu**
 6. Rider profile - training history (Maybe scraped from intervals api).
 7. Check why DFA 1 isn't uploading to **intervals.icu**
+8. Add keyboard shortcuts

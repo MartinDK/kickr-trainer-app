@@ -126,7 +126,7 @@ export function setTarget(kind, value, source = "manual") {
   ride.targetSource = source;
   const fromWorkout = source === "workout";
   const labels = {
-    erg: fromWorkout ? "Workout target" : "ERG target",
+    erg: fromWorkout ? "Interval" : "ERG target",
     resistance: fromWorkout ? "Workout resistance" : "Resistance",
     level: "Level",
     sim: "Sim grade",
@@ -336,4 +336,27 @@ export function togglePresetEditing(key) {
     const firstInput = $(key + "Presets").querySelector("input");
     if (firstInput) firstInput.focus();
   }
+}
+export function selectPreset(key, index) {
+  const preset = presets[key];
+  const slider = sliders[key]?.slider;
+  if (!preset || !slider || preset.editing) return;
+  const value = preset.values[index];
+  if (value === undefined) return;
+  slider.value = value;
+  slider.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+export function adjustPreset(key, index, delta) {
+  const preset = presets[key];
+  const slider = sliders[key]?.slider;
+  if (!preset || !slider || preset.editing) return;
+  if (preset.values[index] === undefined) return;
+  preset.values[index] = clamp(
+    preset.values[index] + delta,
+    Number(slider.min),
+    Number(slider.max),
+  );
+  store.set("presets." + key, preset.values);
+  renderPresets(key);
 }

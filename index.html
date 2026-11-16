@@ -193,7 +193,7 @@
             </div>
             <div>
               <div class="preset-header">
-                <span class="metric-label">Presets</span>
+                <span class="metric-label">Shortcut keys - QWERT</span>
                 <button
                   id="ergEditBtn"
                   type="button"
@@ -209,18 +209,17 @@
           <!-- TAB 2: RESISTANCE MODE (0x40) -->
           <div id="panel-resistance" class="mode-panel is-hidden">
             <div>
-              <h3 class="mode-panel-title">Resistance Percentage</h3>
-              <p class="mode-panel-description">0 - 100%.</p>
+              <h3 class="mode-panel-title">Resistance (0 - 100%)</h3>
             </div>
             <div class="target-stepper">
               <button
                 type="button"
                 class="stepper-button"
                 data-step-for="resistanceSlider"
-                data-step="-5"
+                data-step="-1"
                 aria-label="Decrease resistance by 5 percent"
               >
-                &minus;5
+                &minus;1
               </button>
               <div class="target-readout">
                 <span id="resistanceValueDisplay" class="target-value">50</span>
@@ -230,10 +229,10 @@
                 type="button"
                 class="stepper-button"
                 data-step-for="resistanceSlider"
-                data-step="5"
+                data-step="1"
                 aria-label="Increase resistance by 5 percent"
               >
-                +5
+                +1
               </button>
             </div>
             <div class="slider-block">
@@ -243,7 +242,7 @@
                 min="0"
                 max="100"
                 step="1"
-                value="50"
+                value="25"
                 class="range-slider"
                 aria-label="Resistance in percent"
               />
@@ -255,7 +254,7 @@
             </div>
             <div>
               <div class="preset-header">
-                <span class="metric-label">Presets</span>
+                <span class="metric-label">Shortcut keys - QWERT</span>
                 <button
                   id="resistanceEditBtn"
                   type="button"
@@ -636,23 +635,23 @@
       <section class="ride-cockpit" aria-labelledby="rideCockpitTitle">
         <div class="cockpit-grid">
           <!-- HERO: power vs target -->
-          <article class="cockpit-tile cockpit-tile--power">
+          <article class="cockpit-tile cockpit-tile--primary">
             <div class="power-hero">
               <div class="power-top">
-                <span class="metric-label">Pedal Power (3s avg.)</span>
+                <span class="metric-label">Pedal Power</span>
                 <div class="metric-reading">
-                  <span
-                    id="pedalPowerDisplay"
-                    class="metric-value metric-value--hero metric-value--amber"
-                    >--</span
-                  >
-                  <span class="metric-unit">W</span>
+                  <div class="metric-group">
+                    <span
+                      id="pedalPowerDisplay"
+                      class="metric-value metric-value--hero-sm metric-value--amber"
+                      >--</span
+                    >
+                    <span class="metric-unit">W</span>
+                  </div>
                 </div>
-                <span id="pedalPowerSub" class="metric-note"
-                  >not connected</span
-                >
-              </div>
-              <div class="power-top">
+                <!-- <span id="pedalPowerSub" class="metric-note" -->
+                <!--   >not connected</span -->
+                <!-- > -->
                 <span class="target-chip">
                   <span id="targetModeLabel" class="target-chip-label"
                     >ERG target</span
@@ -661,6 +660,33 @@
                     >150 W</strong
                   >
                 </span>
+              </div>
+              <div class="power-top">
+                <span class="metric-label">Heart rate</span>
+                <div class="metric-reading">
+                  <div class="metric-group">
+                    <span
+                      id="topHrDisplay"
+                      class="metric-value metric-value--hero-sm metric-value--rose"
+                      >--</span
+                    >
+                    <span class="metric-unit">BPM</span>
+                  </div>
+                </div>
+                <span id="pedalPowerSub" class="metric-note">&nbsp;</span>
+              </div>
+              <div class="power-top">
+                <span class="metric-label">Cadence</span>
+                <div class="metric-reading">
+                  <div class="metric-group">
+                    <span
+                      id="liveCadenceDisplay"
+                      class="metric-value metric-value--hero-sm metric-value--lime"
+                      >--</span
+                    >
+                    <span class="metric-unit">RPM</span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -676,12 +702,14 @@
               <div class="power-readout">
                 <span class="metric-label">Kickr Power</span>
                 <div class="metric-reading">
-                  <span
-                    id="trainerPowerDisplay"
-                    class="metric-value metric-value--medium metric-value--emerald"
-                    >--</span
-                  >
-                  <span class="metric-unit">W</span>
+                  <div class="metric-group">
+                    <span
+                      id="trainerPowerDisplay"
+                      class="metric-value metric-value--medium metric-value--emerald"
+                      >--</span
+                    >
+                    <span class="metric-unit">W</span>
+                  </div>
                 </div>
                 <span id="trainerPowerSub" class="metric-note"
                   >not connected</span
@@ -690,27 +718,27 @@
               <div class="power-readout">
                 <span class="metric-label">Pedals - Kickr</span>
                 <div class="metric-reading">
-                  <span
-                    id="deltaDisplay"
-                    class="metric-value metric-value--medium"
-                    >--</span
-                  >
-                  <span class="metric-unit">W</span>
+                  <div class="metric-group">
+                    <span
+                      id="deltaDisplay"
+                      class="metric-value metric-value--medium"
+                      >--</span
+                    >
+                    <span class="metric-unit">W</span>
+                  </div>
                 </div>
                 <span id="deltaSub" class="metric-note">&nbsp;</span>
               </div>
             </div>
           </article>
 
-          <!-- Interval: remaining time -->
+          <!-- Intervals: time -->
           <article class="cockpit-tile cockpit-tile--interval">
-            <span id="intervalLabel" class="metric-label"
-              >Interval remaining</span
-            >
+            <span id="intervalLabel" class="metric-label">Lap Time</span>
             <div class="metric-reading">
               <span
                 id="intervalTimeDisplay"
-                class="metric-value metric-value--xl"
+                class="metric-value metric-value--xl metric-value--amber"
                 >00:00</span
               >
             </div>
@@ -720,30 +748,29 @@
             <span id="intervalSub" class="metric-note">no interval</span>
           </article>
 
-          <!-- Cadence -->
+          <!-- Total Time -->
           <article class="cockpit-tile cockpit-tile--cadence">
-            <span class="metric-label">Cadence</span>
+            <span class="metric-label">Total Time</span>
             <div class="metric-reading">
-              <span
-                id="liveCadenceDisplay"
-                class="metric-value metric-value--xl metric-value--lime"
+              <span id="totalTimeDisplay" class="metric-value metric-value--xl"
                 >--</span
               >
-              <span class="metric-unit">rpm</span>
             </div>
             <span id="cadenceSub" class="metric-note is-hidden">&nbsp;</span>
           </article>
 
-          <!-- Heart rate + DFA a1 gauge -->
+          <!-- Normalised Power + DFA a1 gauge -->
           <article class="cockpit-tile cockpit-tile--hr">
-            <span class="metric-label">Heart rate</span>
+            <span class="metric-label">NP</span>
             <div class="metric-reading">
-              <span
-                id="topHrDisplay"
-                class="metric-value metric-value--hero-sm metric-value--rose"
-                >--</span
-              >
-              <span class="metric-unit">BPM</span>
+              <div class="metric-group">
+                <span
+                  id="npDisplay"
+                  class="metric-value metric-value--hero-sm metric-value--lime"
+                  >--</span
+                >
+                <span class="metric-unit">W</span>
+              </div>
             </div>
 
             <div class="dfa">
@@ -807,27 +834,10 @@
           <!-- Slow metrics strip -->
           <div class="cockpit-strip">
             <div class="strip-item">
-              <span class="metric-label">Total time</span>
-              <span
-                id="totalTimeDisplay"
-                class="metric-value metric-value--medium"
-                >00:00</span
-              >
-            </div>
-            <div class="strip-item">
               <span class="metric-label">TSS</span>
               <span id="tssDisplay" class="metric-value metric-value--medium"
                 >0.0</span
               >
-            </div>
-            <div class="strip-item">
-              <span class="metric-label">NP</span>
-              <div class="metric-reading">
-                <span id="npDisplay" class="metric-value metric-value--medium"
-                  >--</span
-                >
-                <span class="metric-unit">W</span>
-              </div>
             </div>
             <div class="strip-item strip-item--wbal">
               <div class="wbal-head">

@@ -14,6 +14,7 @@ import {
   telemetry,
   workout,
 } from "./state.js";
+import { initShortcuts } from "./shortcuts.js";
 import { withBusy, hideModal, log, showModal } from "./ui/ui.js";
 import { renderHrv } from "./hrv.js";
 import { drawPowerChart } from "./charts.js";
@@ -402,4 +403,5 @@ function tick() {
     console.error("tick failed", err);
   }
 }
+initShortcuts();
 setInterval(tick, 1000);

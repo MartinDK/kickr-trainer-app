@@ -2,6 +2,9 @@
 import { $, ride, store, telemetry, workout } from "./state.js";
 import { log, showModal } from "./ui/ui.js";
 
+// Pin this to the current release (run `npm view @garmin/fitsdk version`).
+const FIT_SDK_URL = "https://cdn.jsdelivr.net/npm/@garmin/fitsdk@21.221.0/+esm";
+
 export function loadIntervalsCredentials() {
   const athleteId = store.get("intervals.athleteId", "");
   const apiKey = store.get("intervals.apiKey", "");
@@ -30,56 +33,100 @@ export function saveIntervalsCredentials() {
 }
 
 /**
- * Generates a standard Garmin TCX XML string from telemetry.fullRideLog.
- * Intervals.icu's /api/v1/athlete/{id}/activities endpoint natively parses .tcx
- * including power (Watts), heart rate (BPM), and cadence (RPM).
+ * Builds a FIT activity file from telemetry.fullRideLog.
+ * TCX has no field for DFA a1, so we use FIT and write it as a developer
+ * field named "Alpha1", which is the name Intervals.icu looks for.
+ * Power source priority is unchanged: pedals first, Kickr as fallback.
  */
-function buildTcxPayload() {
-  const startTime = ride.startedAt
-    ? new Date(ride.startedAt).toISOString()
-    : new Date(Date.now() - Math.round(ride.seconds * 1000)).toISOString();
+async function buildFitPayload() {
+  const { Encoder, Profile } = await import(FIT_SDK_URL);
 
-  const trackpoints = telemetry.fullRideLog
-    .map((row) => {
-      const ts = new Date(
-        Date.parse(startTime) + row.elapsedSeconds * 1000,
-      ).toISOString();
-      const watts = row.pedals ?? row.trainer;
-      const hrXml =
-        row.hr !== null
-          ? `<HeartRateBpm><Value>${Math.round(row.hr)}</Value></HeartRateBpm>`
-          : "";
-      const cadXml =
-        row.cadence !== null && row.cadence !== undefined
-          ? `<Cadence>${Math.round(row.cadence)}</Cadence>`
-          : "";
-      const wattsXml =
-        watts !== null && watts !== undefined
-          ? `<Extensions><TPX xmlns="http://www.garmin.com/xmlschemas/ActivityExtension/v2"><Watts>${Math.round(watts)}</Watts></TPX></Extensions>`
-          : "";
-      return `        <Trackpoint><Time>${ts}</Time>${hrXml}${cadXml}${wattsXml}</Trackpoint>`;
-    })
-    .join("\n");
-
+  const startMs = ride.startedAt
+    ? new Date(ride.startedAt).getTime()
+    : Date.now() - Math.round(ride.seconds * 1000);
+  const startDate = new Date(startMs);
   const totalSec = Math.max(1, Math.round(ride.seconds));
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
-  <Activities>
-    <Activity Sport="Biking">
-      <Id>${startTime}</Id>
-      <Lap StartTime="${startTime}">
-        <TotalTimeSeconds>${totalSec}</TotalTimeSeconds>
-        <DistanceMeters>0</DistanceMeters>
-        <Calories>0</Calories>
-        <Intensity>Active</Intensity>
-        <TriggerMethod>Manual</TriggerMethod>
-        <Track>
-${trackpoints}
-        </Track>
-      </Lap>
-    </Activity>
-  </Activities>
-</TrainingCenterDatabase>`;
+  const endDate = new Date(startMs + totalSec * 1000);
+
+  // Developer field setup. FIT base type 136 = float32.
+  const developerDataIdMesg = {
+    developerDataIndex: 0,
+    applicationId: [
+      0x54, 0x72, 0x61, 0x69, 0x6e, 0x69, 0x6e, 0x67, 0x48, 0x75, 0x62, 0x00,
+      0x00, 0x00, 0x00, 0x01,
+    ],
+  };
+  const alpha1Description = {
+    developerDataIndex: 0,
+    fieldDefinitionNumber: 0,
+    fitBaseTypeId: 136,
+    fieldName: ["Alpha1"],
+    units: [""],
+    nativeMesgNum: Profile.MesgNum.RECORD,
+  };
+  const encoder = new Encoder({
+    fieldDescriptions: {
+      0: {
+        developerDataIdMesg,
+        fieldDescriptionMesg: alpha1Description,
+      },
+    },
+  });
+
+  encoder.onMesg(Profile.MesgNum.FILE_ID, {
+    type: "activity",
+    manufacturer: "development",
+    product: 0,
+    timeCreated: startDate,
+    serialNumber: 1,
+  });
+  encoder.onMesg(Profile.MesgNum.DEVELOPER_DATA_ID, developerDataIdMesg);
+  encoder.onMesg(Profile.MesgNum.FIELD_DESCRIPTION, alpha1Description);
+
+  for (const row of telemetry.fullRideLog) {
+    const watts = row.pedals ?? row.trainer;
+    const record = {
+      timestamp: new Date(startMs + row.elapsedSeconds * 1000),
+    };
+    if (watts !== null && watts !== undefined) record.power = Math.round(watts);
+    if (row.hr !== null && row.hr !== undefined)
+      record.heartRate = Math.round(row.hr);
+    if (row.cadence !== null && row.cadence !== undefined)
+      record.cadence = Math.round(row.cadence);
+    if (
+      row.dfaA1 !== null &&
+      row.dfaA1 !== undefined &&
+      Number.isFinite(row.dfaA1)
+    )
+      record.developerFields = { 0: row.dfaA1 };
+    encoder.onMesg(Profile.MesgNum.RECORD, record);
+  }
+
+  encoder.onMesg(Profile.MesgNum.LAP, {
+    timestamp: endDate,
+    startTime: startDate,
+    totalElapsedTime: totalSec,
+    totalTimerTime: totalSec,
+  });
+  encoder.onMesg(Profile.MesgNum.SESSION, {
+    timestamp: endDate,
+    startTime: startDate,
+    totalElapsedTime: totalSec,
+    totalTimerTime: totalSec,
+    sport: "cycling",
+    subSport: "indoorCycling",
+    firstLapIndex: 0,
+    numLaps: 1,
+  });
+  encoder.onMesg(Profile.MesgNum.ACTIVITY, {
+    timestamp: endDate,
+    numSessions: 1,
+    type: "manual",
+    event: "activity",
+    eventType: "stop",
+  });
+
+  return encoder.close(); // Uint8Array
 }
 
 export async function uploadToIntervalsIcu() {
@@ -111,21 +158,19 @@ export async function uploadToIntervalsIcu() {
   const statusEl = $("intervalsStatusMsg");
   if (statusEl) statusEl.textContent = "Uploading to Intervals.icu…";
   log(
-    "Uploading ride TCX to Intervals.icu (athlete " + athleteId + ")...",
+    "Uploading ride FIT to Intervals.icu (athlete " + athleteId + ")...",
     "info",
   );
 
   try {
-    const tcxXml = buildTcxPayload();
+    const fitBytes = await buildFitPayload();
     const activityName = workout.name
       ? workout.name.replace(/\.[^.]+$/, "")
       : "Indoor Trainer Ride (" + Math.round(telemetry.tss) + " TSS)";
 
     const formData = new FormData();
-    const fileBlob = new Blob([tcxXml], {
-      type: "application/vnd.garmin.tcx+xml",
-    });
-    formData.append("file", fileBlob, activityName + ".tcx");
+    const fileBlob = new Blob([fitBytes], { type: "application/octet-stream" });
+    formData.append("file", fileBlob, activityName + ".fit");
     formData.append("name", activityName);
     formData.append(
       "description",
