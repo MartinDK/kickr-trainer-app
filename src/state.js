@@ -67,7 +67,7 @@ export const DEFAULT_PRESETS = {
   resistance: [10, 30, 50, 70, 90],
 };
 export const CANVAS_FONT =
-  "10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  "13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
 
 export const devices = {
   trainer: {

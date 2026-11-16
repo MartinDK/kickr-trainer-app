@@ -27,7 +27,6 @@ function prepareCanvas(canvas) {
 }
 
 function drawCanvasMessage(ctx, width, height, message) {
-  ctx.font = "12px ui-sans-serif, system-ui, sans-serif";
   ctx.fillStyle = "#94a3b8";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -45,8 +44,8 @@ export function drawPowerChart() {
     .map((sample) => sample.hr)
     .filter((value) => value !== null);
 
-  const padLeft = 38;
-  const padRight = 38;
+  const padLeft = 45;
+  const padRight = 60;
   const padTop = 10;
   const padBottom = 20;
   const plotWidth = width - padLeft - padRight;
