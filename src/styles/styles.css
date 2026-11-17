@@ -1678,8 +1678,8 @@ button {
 }
 
 #btn-stop-workout {
-  border-color: #9d2e41a6;
-  background-color: #fb718529;
+  border-color: rgba(99, 102, 241, 0.5);
+  background-color: rgba(79, 70, 229, 0.16);
   color: white;
 }
 
