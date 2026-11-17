@@ -1677,6 +1677,25 @@ button {
   padding-top: 0.5rem;
 }
 
+#btn-stop-workout {
+  border-color: #9d2e41;
+  background-color: #fb718538;
+  color: white;
+}
+
+#btn-save-csv-workout {
+  border-color: rgba(99, 102, 241, 0.5);
+  background-color: rgba(79, 70, 229, 0.16);
+}
+
+#btn-upload-intervals {
+  color: var(--color-rose);
+}
+
+#btn-workout-builder {
+  color: var(--color-amber);
+}
+
 /* ============================================================
          RESPONSIVE
          ============================================================ */

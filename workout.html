@@ -4,203 +4,16 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Workout Builder</title>
-    <style>
-      :root {
-        --bg: #070b16;
-        --tile: #0d1424;
-        --border: #1d2842;
-        --text: #e8edf7;
-        --muted: #8793ad;
-        --amber: #fbbf24;
-        --indigo: #818cf8;
-        --rose: #fb7185;
-        --track: #1a2338;
-        --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-        --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-      }
-      * {
-        box-sizing: border-box;
-      }
-      body {
-        margin: 0;
-        background: var(--bg);
-        color: var(--text);
-        font: 15px/1.4 var(--sans);
-        padding: 20px;
-      }
-      main {
-        max-width: 1000px;
-        margin: 0 auto;
-        display: grid;
-        gap: 14px;
-      }
-      .card {
-        background: var(--tile);
-        border: 1px solid var(--border);
-        border-radius: 14px;
-        padding: 16px 18px;
-      }
-      .home {
-        background-color: var(--indigo);
-        margin: 0 0 auto;
-      }
-      div {
-        margin: 0 0 auto;
-      }
-      h1 {
-        font-size: 1.25rem;
-        margin: 0;
-      }
-      label,
-      .lbl {
-        font-size: 0.7rem;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: var(--muted);
-      }
-      input,
-      select,
-      button {
-        font: inherit;
-        color: var(--text);
-        background: var(--track);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 7px 9px;
-        min-width: 0;
-      }
-      input:disabled {
-        opacity: 0.45;
-      }
-      input:focus-visible,
-      select:focus-visible,
-      button:focus-visible {
-        outline: 2px solid var(--indigo);
-        outline-offset: 1px;
-      }
-      button {
-        cursor: pointer;
-      }
-      button:hover {
-        border-color: var(--muted);
-      }
-      .primary {
-        background: var(--indigo);
-        color: #0d1424;
-        border-color: var(--indigo);
-        font-weight: 600;
-      }
-      .top {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 16px;
-        align-items: end;
-      }
-      .top > div {
-        display: grid;
-        gap: 4px;
-      }
-      #name {
-        width: min(22rem, 80vw);
-      }
-      #ftp {
-        width: 6rem;
-      }
-      .stats {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 22px;
-        margin-left: auto;
-      }
-      .stat {
-        display: grid;
-        gap: 2px;
-      }
-      .stat b {
-        font: 700 1.3rem var(--mono);
-      }
-      .chartwrap {
-        position: relative;
-        height: 200px;
-      }
-      svg {
-        width: 100%;
-        height: 100%;
-        display: block;
-      }
-      .ref {
-        position: absolute;
-        left: 0;
-        right: 0;
-        border-top: 1px dashed #3a4a70;
-        font-size: 0.65rem;
-        color: var(--muted);
-        pointer-events: none;
-      }
-      .ref span {
-        position: absolute;
-        right: 0;
-        top: -1.3em;
-      }
-      .head,
-      .row {
-        display: grid;
-        grid-template-columns: 2rem 6.5rem 5.5rem 5rem 5rem 1fr auto;
-        gap: 8px;
-        align-items: center;
-      }
-      .head {
-        padding-bottom: 8px;
-      }
-      .row {
-        padding: 5px 0;
-        border-top: 1px solid var(--border);
-      }
-      .idx {
-        font: 0.8rem var(--mono);
-        color: var(--muted);
-      }
-      .acts {
-        display: flex;
-        gap: 4px;
-      }
-      .acts button {
-        padding: 5px 8px;
-      }
-      .bar {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        align-items: center;
-      }
-      .note {
-        font-size: 0.75rem;
-        color: var(--muted);
-      }
-      @media (max-width: 760px) {
-        .head {
-          display: none;
-        }
-        .row {
-          grid-template-columns: 2rem 1fr 1fr 1fr;
-        }
-        .row [data-f="text"] {
-          grid-column: 1/-1;
-        }
-        .acts {
-          grid-column: 1/-1;
-        }
-      }
-    </style>
+    <link rel="stylesheet" href="./src/styles/workout-builder.css" />
   </head>
   <body>
     <main>
       <section class="card top">
         <div>
-          <label for="home">&nbsp;</label>
-          <a href="./index.html">
-            <button id="home" class="home">Home</button>
-          </a>
+          <label>&nbsp;</label>
+          <a href="./index.html"
+            ><button class="home">Return to Training</button></a
+          >
         </div>
         <div>
           <label for="name">Workout name</label
@@ -257,9 +70,6 @@
       <section class="card bar">
         <button class="primary" data-export="mrc">Download .mrc (% FTP)</button>
         <button data-export="erg">Download .erg (watts)</button>
-        <a href="./index.html">
-          <button class="primary">Home</button>
-        </a>
         <span class="note"
           >Load the file in the trainer app with its workout file button. ERG
           converts using the FTP above. Messages show for 10 s (or the step
@@ -505,6 +315,16 @@
         }),
       );
 
+      // Default FTP comes from the training app, which saves it under this key.
+      const appFtp = (() => {
+        try {
+          const n = Number(JSON.parse(localStorage.getItem("trainingHub.ftp")));
+          return n >= 50 && n <= 600 ? n : null;
+        } catch {
+          return null;
+        }
+      })();
+      if (appFtp) W.ftp = appFtp;
       $("#ftp").value = W.ftp = clamp(parseInt(W.ftp, 10) || 250, 50, 600);
       renderRows();
     </script>
