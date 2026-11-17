@@ -86,7 +86,9 @@ button:hover {
   align-items: end;
 }
 .home {
-  background-color: var(--indigo);
+  /* background-color: var(--indigo); */
+  border-color: rgba(99, 102, 241, 0.5);
+  background-color: rgba(79, 70, 229, 0.48);
 }
 .top > div {
   display: grid;
