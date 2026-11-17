@@ -1,21 +1,13 @@
 // metrics.js — Real-time Normalized Power (NP), TSS, and W' Balance (Skiba model)
-import { $, average, clamp, ride, telemetry } from "./state.js";
+import { $, average, clamp, ride, telemetry, workout } from "./state.js";
 import { updateWPrimeBal } from "./ui/cockpit.js";
 
 export function currentFtp() {
-  const input = $("ftpInput");
-  if (!input) return 236;
-  const entered = Number(input.value);
-  return entered >= 50 && entered <= 600 ? entered : Number(input.defaultValue);
+  return workout.ftp;
 }
 
 export function configuredWPrime() {
-  const input = $("wPrimeInput");
-  if (!input) return 20000;
-  const entered = Number(input.value);
-  return entered >= 5000 && entered <= 50000
-    ? entered
-    : Number(input.defaultValue);
+  return workout.wPrime;
 }
 
 export function resetPowerMetrics() {

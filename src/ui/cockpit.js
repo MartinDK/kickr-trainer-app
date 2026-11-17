@@ -1,35 +1,24 @@
 // Helpers for the new cockpit elements. Your existing code can keep setting
 // pedalPowerDisplay, trainerPowerDisplay, topHrDisplay etc. exactly as before.
 
-const $ = (id) => document.getElementById(id);
-const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-
-function formatClock(totalSeconds) {
-  const s = Math.max(0, Math.round(totalSeconds));
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  const mm = String(m).padStart(2, "0");
-  const ss = String(sec).padStart(2, "0");
-  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
-}
+import { $, clamp, formatTime } from "../state.js";
 
 // Interval: shows REMAINING time and a progress bar of how much has elapsed.
 // Pass null for totalSeconds in an unstructured ride to fall back to a lap timer.
 function updateInterval(elapsedSeconds, totalSeconds) {
   if (totalSeconds == null) {
     $("intervalLabel").textContent = "Lap time";
-    $("intervalTimeDisplay").textContent = formatClock(elapsedSeconds);
+    $("intervalTimeDisplay").textContent = formatTime(elapsedSeconds);
     $("intervalProgressFill").style.width = "0%";
     $("intervalSub").textContent = "no interval";
     return;
   }
   const remaining = Math.max(0, totalSeconds - elapsedSeconds);
   $("intervalLabel").textContent = "Interval remaining";
-  $("intervalTimeDisplay").textContent = formatClock(Math.ceil(remaining));
+  $("intervalTimeDisplay").textContent = formatTime(Math.ceil(remaining));
   $("intervalProgressFill").style.width =
     `${clamp(elapsedSeconds / totalSeconds, 0, 1) * 100}%`;
-  $("intervalSub").textContent = `of ${formatClock(totalSeconds)}`;
+  $("intervalSub").textContent = `of ${formatTime(totalSeconds)}`;
 }
 
 // Target deviation bar: full scale is +/- 20% of target (change SPAN to taste).
@@ -96,7 +85,7 @@ function updateWPrimeBal(balKj, maxKj) {
 }
 
 export {
-  formatClock,
+  formatTime,
   updateInterval,
   updateTargetDeviation,
   updateDfa,

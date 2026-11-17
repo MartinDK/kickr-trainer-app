@@ -7,6 +7,7 @@ import {
   ride,
   telemetry,
   workout,
+  activeWorkoutMessage,
 } from "./state.js";
 import { commands, sendTrainerCommand, setTarget } from "./trainer.js";
 import { log, showModal } from "./ui/ui.js";
@@ -18,19 +19,40 @@ import {
 } from "./audio.js";
 import { drawPowerChart } from "./charts.js";
 
+const DEFAULT_MESSAGE_SECONDS = 10; // used when a line has no duration
+
+/**
+ * Parses one [COURSE TEXT] line: offset (seconds), message, duration (seconds).
+ * Accepts tab-separated or space-separated fields. Returns null if unusable.
+ */
+function parseCourseTextLine(line) {
+  const m = line.match(
+    /^(\d+(?:\.\d+)?)[\t ]+(.*?)(?:[\t ]+(\d+(?:\.\d+)?))?$/,
+  );
+  if (!m) return null;
+  const t = Number(m[1]);
+  const text = m[2].trim();
+  const duration = m[3] === undefined ? DEFAULT_MESSAGE_SECONDS : Number(m[3]);
+  if (!text || !(duration > 0)) return null;
+  return { t, text, duration };
+}
+
 export function parseWorkoutFile(text, fileName) {
   const points = [];
+  const messages = [];
   let unit = null;
-  let inData = false;
+  let section = null; // "data", "text", or null (header or unknown)
   for (const rawLine of text.split(/\r?\n/)) {
     const line = rawLine.trim();
     if (!line) continue;
     const upper = line.toUpperCase();
     if (upper.startsWith("[")) {
-      inData = upper.startsWith("[COURSE DATA]");
+      if (upper.startsWith("[COURSE DATA]")) section = "data";
+      else if (upper.startsWith("[COURSE TEXT]")) section = "text";
+      else section = null;
       continue;
     }
-    if (inData) {
+    if (section === "data") {
       const [minutes, value] = line.split(/[\s,;]+/).map(Number);
       if (
         Number.isFinite(minutes) &&
@@ -39,6 +61,9 @@ export function parseWorkoutFile(text, fileName) {
         value >= 0
       )
         points.push({ t: minutes * 60, v: value });
+    } else if (section === "text") {
+      const message = parseCourseTextLine(line);
+      if (message) messages.push(message);
     } else if (/^MINUTES\s+PERCENT/.test(upper)) {
       unit = "percent";
     } else if (/^MINUTES\s+WATTS/.test(upper)) {
@@ -46,6 +71,7 @@ export function parseWorkoutFile(text, fileName) {
     }
   }
   points.sort((a, b) => a.t - b.t);
+  messages.sort((a, b) => a.t - b.t);
   const duration = points.length ? points[points.length - 1].t : 0;
   if (points.length < 2 || duration <= 0) {
     throw new Error(
@@ -54,11 +80,11 @@ export function parseWorkoutFile(text, fileName) {
   }
   return {
     points,
+    messages,
     duration,
     unit: unit || (/\.erg$/i.test(fileName) ? "watts" : "percent"),
   };
 }
-
 export function workoutValueAt(time) {
   const points = workout.points;
   for (let i = 1; i < points.length; i++) {
@@ -168,12 +194,43 @@ export function pauseWorkout(reason) {
 }
 
 export function stopWorkout() {
+  lastMessage = null;
   workout.playing = false;
   workout.elapsed = 0;
   workout.segment = -1;
   workout.lastCountdownSec = -1;
   $("workoutPlayBtn").textContent = "Play Workout";
   renderWorkout();
+}
+
+let lastMessage = null; // message that most recently triggered the chime
+
+let messageAudioCtx = null;
+function playMessageChime() {
+  try {
+    messageAudioCtx ??= new (
+      window.AudioContext || window.webkitAudioContext
+    )();
+    const ctx = messageAudioCtx;
+    if (ctx.state === "suspended") ctx.resume();
+    const now = ctx.currentTime;
+    // Two soft rising notes, distinct from the interval chime
+    [880, 1318.5].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      const start = now + i * 0.14;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.25, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.35);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + 0.4);
+    });
+  } catch {
+    /* audio unavailable: the on-screen message still shows */
+  }
 }
 
 export function advanceWorkout(elapsedSeconds) {
@@ -197,6 +254,11 @@ export function advanceWorkout(elapsedSeconds) {
     playCountdownBeep();
   }
 
+  // Chime when a new on-screen message starts
+  const message = activeWorkoutMessage(workout.elapsed);
+  if (message && message !== lastMessage) playMessageChime();
+  lastMessage = message;
+
   if (currInfo.segment !== workout.segment) {
     workout.segment = currInfo.segment;
     workout.lastCountdownSec = -1;
@@ -218,6 +280,7 @@ export function advanceWorkout(elapsedSeconds) {
 
 export async function loadWorkoutFile(file) {
   try {
+    lastMessage = null;
     const parsed = parseWorkoutFile(await file.text(), file.name);
     Object.assign(workout, parsed, {
       name: file.name,
@@ -226,6 +289,7 @@ export async function loadWorkoutFile(file) {
       segment: -1,
       lastSent: "",
       lastCountdownSec: -1,
+      messages: parsed.messages ?? [],
     });
     $("workoutTitleDisplay").textContent =
       file.name +

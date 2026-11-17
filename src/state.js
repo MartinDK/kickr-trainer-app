@@ -32,11 +32,12 @@ export const $ = (id) => document.getElementById(id);
 export const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
 /**
- * Arithmetic mean. Returns NaN for an empty array (0 / 0), so callers must
- * check the length first.
+ * Arithmetic mean. Returns null for an empty array (no data), matching how
+ * missing readings are represented elsewhere. Check for null before
+ * formatting the result or doing maths with it.
  */
 export const average = (values) =>
-  values.reduce((sum, v) => sum + v, 0) / values.length;
+  values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : null;
 
 /** Promise that resolves after `ms` milliseconds. Use with await. */
 export const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -46,17 +47,18 @@ export const formatGrade = (grade) =>
   (grade >= 0 ? "+" : "") + grade.toFixed(1) + "%";
 
 /**
- * Formats seconds as mm:ss. Minutes are not wrapped into hours, so 3700 s
- * shows as "61:40". (cockpit.js has its own formatter that adds hours, and
- * charts.js has a local one too.)
+ * The app's one time formatter. Formats seconds as mm:ss, or h:mm:ss from
+ * one hour up (3700 s shows as "1:01:40"). Rounds to the nearest second and
+ * treats negative values as 0. Import this instead of writing a local one.
  */
 export const formatTime = (seconds) => {
   const total = Math.max(0, Math.round(seconds));
-  return (
-    String(Math.floor(total / 60)).padStart(2, "0") +
-    ":" +
-    String(total % 60).padStart(2, "0")
-  );
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const mm = String(m).padStart(2, "0");
+  const ss = String(s).padStart(2, "0");
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 };
 
 /** Converts a DataView to a space-separated hex string, for the Bluetooth log. */
@@ -138,6 +140,9 @@ export const DEFAULT_PRESETS = {
   erg: [100, 150, 200, 250, 300],
   resistance: [10, 30, 50, 70, 90],
 };
+/** Font for all canvas chart text. Change the size here to resize chart text. */
+export const CANVAS_FONT =
+  "13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
 
 // ============================================================
 // DEVICES
@@ -245,6 +250,7 @@ export const WPRIME_RANGE = { min: 5000, max: 50000, fallback: 19000 }; // joule
 /**
  * The loaded workout and its playback position.
  *   points            [{ t, v }]: time in seconds and target value
+ *   messages          [{ t, text, duration }] in seconds, from the workout file
  *   unit              what `v` means (default "percent", as a share of FTP)
  *   name              file name of the loaded workout
  *   duration          total length in seconds
@@ -259,6 +265,7 @@ export const WPRIME_RANGE = { min: 5000, max: 50000, fallback: 19000 }; // joule
  */
 export const workout = {
   points: [],
+  messages: [],
   unit: "percent",
   name: "",
   duration: 0,
@@ -271,6 +278,11 @@ export const workout = {
   ftp: FTP_RANGE.fallback,
   wPrime: WPRIME_RANGE.fallback,
 };
+
+/** The workout message showing at `elapsed` seconds, or null. */
+export const activeWorkoutMessage = (elapsed) =>
+  workout.messages.find((m) => elapsed >= m.t && elapsed < m.t + m.duration) ??
+  null;
 
 // ============================================================
 // TELEMETRY STATE

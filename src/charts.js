@@ -18,7 +18,7 @@
  *     the window scrolls and keeps the same width.
  *
  * Where to make changes:
- *   - Text size and typeface ...... CANVAS_FONT
+ *   - Text size and typeface ...... CANVAS_FONT in state.js (one place)
  *   - Margins around the plot ..... padLeft / padRight / padTop / padBottom
  *   - Line colours and dashes ..... the drawSeries(...) calls near the bottom
  *   - Axis ranges and rounding .... topPower / topHr
@@ -36,15 +36,15 @@
  */
 import {
   $,
+  CANVAS_FONT,
   HISTORY_SECONDS,
   average,
   clamp,
+  formatTime,
   telemetry,
   workout,
+  activeWorkoutMessage,
 } from "./state.js";
-
-const CANVAS_FONT =
-  "13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
 
 /**
  * Sizes a canvas to its displayed size (times the device pixel ratio, so
@@ -74,16 +74,17 @@ function prepareCanvas(canvas) {
   return { ctx, width, height };
 }
 
-/**
- * Draws a centred message (for example an empty-state hint) on the canvas.
- * NOTE: not currently called anywhere in this file. It also does not set
- * ctx.font, so it would use whatever font the context had last.
- */
-function drawCanvasMessage(ctx, width, height, message) {
-  ctx.fillStyle = "#94a3b8";
+function drawBanner(ctx, text, centerX, y, maxWidth) {
+  ctx.font = CANVAS_FONT;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(message, width / 2, height / 2);
+  const w = Math.min(ctx.measureText(text).width + 24, maxWidth);
+  ctx.fillStyle = "rgba(13, 20, 36, 0.85)";
+  ctx.beginPath();
+  ctx.roundRect(centerX - w / 2, y - 14, w, 28, 8);
+  ctx.fill();
+  ctx.fillStyle = "#e8edf7";
+  ctx.fillText(text, centerX, y, w - 24);
 }
 
 /**
@@ -321,18 +322,6 @@ export function drawPowerChart() {
     ctx.fillText(Math.round(value) + "bpm", width - padRight + 6, lineY);
   }
 
-  // Formats seconds as m:ss, or h:mm:ss from one hour up.
-  const formatTime = (secs) => {
-    const m = Math.floor(Math.max(0, secs) / 60);
-    const s = Math.floor(Math.max(0, secs) % 60);
-    if (m >= 60) {
-      const h = Math.floor(m / 60);
-      const remM = m % 60;
-      return `${h}:${remM.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-    }
-    return `${m}:${s.toString().padStart(2, "0")}`;
-  };
-
   // ----------------------------------------------------------
   // 4. Time axis labels: window start on the left, window end on the right.
   // ----------------------------------------------------------
@@ -414,5 +403,9 @@ export function drawPowerChart() {
     ctx.textAlign = "left";
     ctx.textBaseline = "bottom";
     ctx.fillText("Avg " + Math.round(avgHr) + " bpm", padLeft + 6, avgY - 2);
+  }
+  const msg = activeWorkoutMessage(currentElapsed);
+  if (msg) {
+    drawBanner(ctx, msg.text, padLeft + plotWidth / 2, padTop + 16, plotWidth);
   }
 }
