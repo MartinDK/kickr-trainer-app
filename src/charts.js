@@ -38,12 +38,12 @@ import {
   $,
   CANVAS_FONT,
   HISTORY_SECONDS,
+  activeWorkoutMessage,
   average,
   clamp,
   formatTime,
   telemetry,
   workout,
-  activeWorkoutMessage,
 } from "./state.js";
 
 /**
@@ -74,6 +74,10 @@ function prepareCanvas(canvas) {
   return { ctx, width, height };
 }
 
+/**
+ * Draws a message banner (for example a workout text cue) on a dark pill so
+ * it stays readable over the chart lines. Text is squeezed to fit maxWidth.
+ */
 function drawBanner(ctx, text, centerX, y, maxWidth) {
   ctx.font = CANVAS_FONT;
   ctx.textAlign = "center";
@@ -81,7 +85,8 @@ function drawBanner(ctx, text, centerX, y, maxWidth) {
   const w = Math.min(ctx.measureText(text).width + 24, maxWidth);
   ctx.fillStyle = "rgba(13, 20, 36, 0.85)";
   ctx.beginPath();
-  ctx.roundRect(centerX - w / 2, y - 14, w, 28, 8);
+  if (ctx.roundRect) ctx.roundRect(centerX - w / 2, y - 14, w, 28, 8);
+  else ctx.rect(centerX - w / 2, y - 14, w, 28);
   ctx.fill();
   ctx.fillStyle = "#e8edf7";
   ctx.fillText(text, centerX, y, w - 24);
@@ -108,11 +113,28 @@ export function drawPowerChart() {
   // fullRideLog rows can hold undefined for missing readings, history uses null.
   const isReading = (value) => value !== null && value !== undefined;
 
+  // Workout points are in % FTP for .mrc files and watts for .erg files.
+  // The chart's power axis is in watts, so convert before plotting.
+  const toWatts = (v) =>
+    workout.unit === "percent" ? (v * workout.ftp) / 100 : v;
+
+  // Resistance mode: the workout profile is a percentage, so it is drawn on
+  // its own percent scale instead of the watts axis.
+  const pctMode = hasWorkout && workout.mode === "res";
+  const toPct = (v) =>
+    workout.unit === "percent" ? v : (v / workout.ftp) * 100;
+
   // Collect every power and HR reading so the axes can be scaled to fit.
   const powerValues = history
-    .flatMap((sample) => [sample.trainer, sample.pedals, sample.target])
+    .flatMap((sample) =>
+      pctMode
+        ? [sample.trainer, sample.pedals]
+        : [sample.trainer, sample.pedals, sample.target],
+    )
     .filter(isReading);
-  const hrValues = history.map((sample) => sample.hr).filter(isReading);
+  const hrValues = history
+    .map((sample) => sample.hr)
+    .filter(isReading);
 
   // ----------------------------------------------------------
   // Layout: space reserved around the plot for axis labels.
@@ -147,7 +169,7 @@ export function drawPowerChart() {
   const peakPower = Math.max(
     200,
     ...powerValues,
-    ...workout.points.map((p) => p.v),
+    ...(pctMode ? [] : workout.points.map((p) => toWatts(p.v))),
   );
   const peakHr = Math.max(100, ...hrValues);
 
@@ -198,8 +220,7 @@ export function drawPowerChart() {
       // Anchor the newest sample to the current workout position, and place
       // earlier samples by how many ride seconds before it they were recorded.
       const newest = history[history.length - 1].elapsedSeconds;
-      const sampleTime =
-        currentElapsed - (newest - history[index].elapsedSeconds);
+      const sampleTime = currentElapsed - (newest - history[index].elapsedSeconds);
       return mapTimeX(sampleTime);
     } else {
       return (
@@ -223,6 +244,15 @@ export function drawPowerChart() {
     plotHeight -
     ((clamp(value, minHr, topHr) - minHr) / (topHr - minHr)) * plotHeight;
 
+  // Percent scale for resistance mode: 0 to at least 100%, with 10% headroom.
+  const peakPct = Math.max(100, ...workout.points.map((p) => toPct(p.v)));
+  const topPct = Math.ceil((peakPct * 1.1) / 10) * 10;
+  const yPct = (value) =>
+    padTop + plotHeight - (clamp(value, 0, topPct) / topPct) * plotHeight;
+
+  // Workout profile y position: percent scale in resistance mode, watts otherwise.
+  const yProfile = (v) => (pctMode ? yPct(toPct(v)) : yPower(toWatts(v)));
+
   // ----------------------------------------------------------
   // 1. Workout profile (drawn first so live lines sit on top).
   //    A filled shape under the target line, an outline, and a vertical
@@ -235,7 +265,7 @@ export function drawPowerChart() {
 
     workout.points.forEach((point) => {
       const wx = mapTimeX(point.t);
-      const wy = yPower(point.v);
+      const wy = yProfile(point.v);
       if (!pathStarted) {
         ctx.moveTo(wx, padTop + plotHeight);
         ctx.lineTo(wx, wy);
@@ -260,7 +290,7 @@ export function drawPowerChart() {
       let strokeStarted = false;
       workout.points.forEach((point) => {
         const wx = mapTimeX(point.t);
-        const wy = yPower(point.v);
+        const wy = yProfile(point.v);
         if (!strokeStarted) {
           ctx.moveTo(wx, wy);
           strokeStarted = true;
@@ -323,6 +353,29 @@ export function drawPowerChart() {
   }
 
   // ----------------------------------------------------------
+  // 3b. Resistance mode: percent labels for the workout profile, drawn inside
+  //     the plot at the left edge in the profile's indigo, with faint dashed
+  //     guide lines. The watts axis on the left stays as it is.
+  // ----------------------------------------------------------
+  if (pctMode) {
+    ctx.save();
+    ctx.setLineDash([3, 5]);
+    ctx.strokeStyle = "rgba(129, 140, 248, 0.3)";
+    ctx.fillStyle = "#818cf8";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "bottom";
+    for (let pct = 50; pct <= topPct; pct += 50) {
+      const lineY = Math.round(yPct(pct)) + 0.5;
+      ctx.beginPath();
+      ctx.moveTo(padLeft, lineY);
+      ctx.lineTo(width - padRight, lineY);
+      ctx.stroke();
+      ctx.fillText(pct + "%", padLeft + 4, lineY - 2);
+    }
+    ctx.restore();
+  }
+
+  // ----------------------------------------------------------
   // 4. Time axis labels: window start on the left, window end on the right.
   // ----------------------------------------------------------
   ctx.fillStyle = "#94a3b8";
@@ -348,7 +401,7 @@ export function drawPowerChart() {
   //   - Points outside the plot area are skipped (and also lift the pen).
   //   - useHrAxis switches the y mapping from watts to bpm.
   // ----------------------------------------------------------
-  const drawSeries = (key, color, dashed, useHrAxis = false) => {
+  const drawSeries = (key, color, dashed, useHrAxis = false, yMap = null) => {
     if (!history.length) return;
     let penDown = false;
     ctx.beginPath();
@@ -358,7 +411,11 @@ export function drawPowerChart() {
         penDown = false;
         return;
       }
-      const chartY = useHrAxis ? yHr(value) : yPower(value);
+      const chartY = yMap
+        ? yMap(value)
+        : useHrAxis
+          ? yHr(value)
+          : yPower(value);
       const chartX = x(index);
       if (chartX >= padLeft && chartX <= width - padRight) {
         if (penDown) ctx.lineTo(chartX, chartY);
@@ -378,7 +435,7 @@ export function drawPowerChart() {
 
   // Series order is draw order (later lines sit on top). Colours match the
   // cockpit tiles: indigo target, emerald Kickr, amber pedals, rose HR.
-  drawSeries("target", "#818cf8", true, false);
+  drawSeries("target", "#818cf8", true, false, pctMode ? yPct : null);
   drawSeries("trainer", "#34d399", false, false);
   drawSeries("pedals", "#fbbf24", false, false);
   drawSeries("hr", "#f43f5e", false, true);
@@ -404,6 +461,11 @@ export function drawPowerChart() {
     ctx.textBaseline = "bottom";
     ctx.fillText("Avg " + Math.round(avgHr) + " bpm", padLeft + 6, avgY - 2);
   }
+
+  // ----------------------------------------------------------
+  // 7. Workout message banner (from the file's [COURSE TEXT] section),
+  //    drawn last so it sits on top of everything else.
+  // ----------------------------------------------------------
   const msg = activeWorkoutMessage(currentElapsed);
   if (msg) {
     drawBanner(ctx, msg.text, padLeft + plotWidth / 2, padTop + 16, plotWidth);

@@ -250,7 +250,6 @@ export const WPRIME_RANGE = { min: 5000, max: 50000, fallback: 19000 }; // joule
 /**
  * The loaded workout and its playback position.
  *   points            [{ t, v }]: time in seconds and target value
- *   messages          [{ t, text, duration }] in seconds, from the workout file
  *   unit              what `v` means (default "percent", as a share of FTP)
  *   name              file name of the loaded workout
  *   duration          total length in seconds
@@ -265,7 +264,6 @@ export const WPRIME_RANGE = { min: 5000, max: 50000, fallback: 19000 }; // joule
  */
 export const workout = {
   points: [],
-  messages: [],
   unit: "percent",
   name: "",
   duration: 0,
@@ -275,14 +273,16 @@ export const workout = {
   segment: -1,
   lastSent: "",
   lastCountdownSec: -1,
+  messages: [], // [{ t, text, duration }] in seconds, from [COURSE TEXT]
   ftp: FTP_RANGE.fallback,
   wPrime: WPRIME_RANGE.fallback,
 };
 
 /** The workout message showing at `elapsed` seconds, or null. */
 export const activeWorkoutMessage = (elapsed) =>
-  workout.messages.find((m) => elapsed >= m.t && elapsed < m.t + m.duration) ??
-  null;
+  (workout.messages ?? []).find(
+    (m) => elapsed >= m.t && elapsed < m.t + m.duration,
+  ) ?? null;
 
 // ============================================================
 // TELEMETRY STATE
