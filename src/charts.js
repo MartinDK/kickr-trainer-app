@@ -1,6 +1,41 @@
+/**
+ * charts.js — canvas drawing for the Live Telemetry chart.
+ *
+ * Exports one function, drawPowerChart(), which redraws the whole chart from
+ * scratch each call (called from renderLive every tick, and on window resize
+ * and after workout/FTP changes).
+ *
+ * What the chart shows:
+ *   - Left axis (W):   Kickr power, pedal power, and the ERG/workout target.
+ *   - Right axis (bpm): heart rate, plus a dashed average-HR reference line.
+ *   - Optional workout profile drawn behind the live lines, with a playhead.
+ *
+ * Two time modes:
+ *   - No workout loaded: a rolling window of the last HISTORY_SECONDS
+ *     (labelled "-5 min" to "now"). The newest sample sits at the right edge.
+ *   - Workout loaded: the x-axis spans the whole workout, so the live lines
+ *     fill in from left to right as you ride. Past the end of the workout,
+ *     the window scrolls and keeps the same width.
+ *
+ * Where to make changes:
+ *   - Text size and typeface ...... CANVAS_FONT
+ *   - Margins around the plot ..... padLeft / padRight / padTop / padBottom
+ *   - Line colours and dashes ..... the drawSeries(...) calls near the bottom
+ *   - Axis ranges and rounding .... topPower / topHr
+ *   - Number of grid lines ........ the two `for (let i = 0; i <= 4; ...)` loops
+ *
+ * Data it reads (all from state.js):
+ *   telemetry.history   rolling per-second samples (last HISTORY_SECONDS), used
+ *                       when no workout is loaded:
+ *                       { trainer, pedals, target, hr } (null = no reading)
+ *   telemetry.fullRideLog  every sample of the ride, used when a workout is
+ *                       loaded. Needs elapsedSeconds, trainer, pedals, target, hr.
+ *   workout.points      array of { t, v }: time in seconds and target watts
+ *   workout.duration    total workout length in seconds
+ *   workout.elapsed     current playback position in seconds
+ */
 import {
   $,
-  CANVAS_FONT,
   HISTORY_SECONDS,
   average,
   clamp,
@@ -8,6 +43,19 @@ import {
   workout,
 } from "./state.js";
 
+const CANVAS_FONT =
+  "13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+
+/**
+ * Sizes a canvas to its displayed size (times the device pixel ratio, so
+ * text and lines stay sharp on high-DPI screens), resets the drawing
+ * transform, and clears it. After this call, all drawing coordinates are in
+ * CSS pixels, so a 12px font is 12 real CSS pixels.
+ *
+ * @param {HTMLCanvasElement|null} canvas
+ * @returns {{ctx: CanvasRenderingContext2D, width: number, height: number}|null}
+ *          null if the canvas is missing or currently has no size (hidden).
+ */
 function prepareCanvas(canvas) {
   if (!canvas) return null;
   const width = canvas.clientWidth;
@@ -26,24 +74,51 @@ function prepareCanvas(canvas) {
   return { ctx, width, height };
 }
 
+/**
+ * Draws a centred message (for example an empty-state hint) on the canvas.
+ * NOTE: not currently called anywhere in this file. It also does not set
+ * ctx.font, so it would use whatever font the context had last.
+ */
 function drawCanvasMessage(ctx, width, height, message) {
   ctx.fillStyle = "#94a3b8";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(message, width / 2, height / 2);
 }
+
+/**
+ * Redraws the live telemetry chart. Safe to call at any time: it returns
+ * quietly if the canvas is missing or hidden.
+ */
 export function drawPowerChart() {
   const surface = prepareCanvas($("powerChart"));
   if (!surface) return;
   const { ctx, width, height } = surface;
-  const history = telemetry.history;
+  const hasWorkout =
+    workout.points && workout.points.length > 0 && workout.duration > 0;
+
+  // Which samples to plot.
+  //   Workout loaded: the full ride log, so the live lines cover the whole
+  //                   workout. telemetry.history is capped at HISTORY_SECONDS
+  //                   and would only fill the last five minutes.
+  //   No workout:     the rolling five-minute history.
+  const history = hasWorkout ? telemetry.fullRideLog : telemetry.history;
+
+  // fullRideLog rows can hold undefined for missing readings, history uses null.
+  const isReading = (value) => value !== null && value !== undefined;
+
+  // Collect every power and HR reading so the axes can be scaled to fit.
   const powerValues = history
     .flatMap((sample) => [sample.trainer, sample.pedals, sample.target])
-    .filter((value) => value !== null);
-  const hrValues = history
-    .map((sample) => sample.hr)
-    .filter((value) => value !== null);
+    .filter(isReading);
+  const hrValues = history.map((sample) => sample.hr).filter(isReading);
 
+  // ----------------------------------------------------------
+  // Layout: space reserved around the plot for axis labels.
+  // padRight must be wide enough for the longest HR label (for
+  // example "160bpm") at the current CANVAS_FONT size, or the
+  // label is clipped at the canvas edge.
+  // ----------------------------------------------------------
   const padLeft = 45;
   const padRight = 60;
   const padTop = 10;
@@ -51,28 +126,40 @@ export function drawPowerChart() {
   const plotWidth = width - padLeft - padRight;
   const plotHeight = height - padTop - padBottom;
 
-  const topPower = Math.max(
-    200,
-    Math.ceil(
-      (Math.max(
-        200,
-        ...(powerValues.length ? powerValues : [0]),
-        ...(workout.points.length ? workout.points.map((p) => p.v) : [0]),
-      ) *
-        1.1) /
-        50,
-    ) * 50,
-  );
-  const topHr = Math.max(
-    160,
-    Math.ceil(
-      (Math.max(100, ...(hrValues.length ? hrValues : [0])) * 1.1) / 20,
-    ) * 20,
-  );
+  // ----------------------------------------------------------
+  // Axis ranges.
+  // Each axis runs from a fixed minimum up to a top value, split into four
+  // equal steps (five grid lines). The top is the highest reading (or
+  // workout target) plus 10%, with a floor, rounded up so the step size is
+  // a round number (multiple of 10 W, or 5 bpm).
+  // Readings below the minimum are drawn on the bottom line.
+  // ----------------------------------------------------------
+  const minPower = 70;
+  const minHr = 40;
 
-  // Time windowing: Full workout duration if loaded, otherwise 5-min rolling window
-  const hasWorkout =
-    workout.points && workout.points.length > 0 && workout.duration > 0;
+  const niceTop = (min, peak, floor, stepRound) =>
+    min +
+    4 *
+      Math.ceil((Math.max(peak * 1.1, floor) - min) / 4 / stepRound) *
+      stepRound;
+
+  const peakPower = Math.max(
+    200,
+    ...powerValues,
+    ...workout.points.map((p) => p.v),
+  );
+  const peakHr = Math.max(100, ...hrValues);
+
+  const topPower = niceTop(minPower, peakPower, 200, 10);
+  const topHr = niceTop(minHr, peakHr, 160, 5);
+
+  // ----------------------------------------------------------
+  // Time window.
+  // With a workout: show the full workout, from 0 to its duration. Once
+  // playback passes the end, slide the window so it keeps the same width.
+  // Without a workout: show the last HISTORY_SECONDS ending now.
+  // ----------------------------------------------------------
+  // (hasWorkout is defined near the top of the function.)
   const viewDuration = hasWorkout ? workout.duration : HISTORY_SECONDS;
   const currentElapsed = workout.elapsed || 0;
 
@@ -91,16 +178,27 @@ export function drawPowerChart() {
     startTime = Math.max(0, endTime - HISTORY_SECONDS);
   }
 
-  // Time mapping function across the chart width
+  // ----------------------------------------------------------
+  // Coordinate mapping helpers (data value -> canvas pixel).
+  // ----------------------------------------------------------
+
+  // Workout time in seconds -> x pixel.
   const mapTimeX = (time) => {
     if (viewDuration <= 0) return padLeft;
     return padLeft + ((time - startTime) / viewDuration) * plotWidth;
   };
 
-  // Map history telemetry samples to chart X coordinates
+  // History sample index -> x pixel. Assumes one sample per second, with
+  // the newest sample (last index) at "now".
+  //   workout mode: placed on the workout timeline.
+  //   rolling mode: placed from the right edge, spaced evenly.
   const x = (index) => {
     if (hasWorkout) {
-      const sampleTime = currentElapsed - (history.length - 1 - index);
+      // Anchor the newest sample to the current workout position, and place
+      // earlier samples by how many ride seconds before it they were recorded.
+      const newest = history[history.length - 1].elapsedSeconds;
+      const sampleTime =
+        currentElapsed - (newest - history[index].elapsedSeconds);
       return mapTimeX(sampleTime);
     } else {
       return (
@@ -111,13 +209,24 @@ export function drawPowerChart() {
     }
   };
 
+  // Power (W) and heart rate (bpm) -> y pixel. Values are clamped to the
+  // axis range so nothing is drawn outside the plot.
   const yPower = (value) =>
-    padTop + plotHeight - (clamp(value, 0, topPower) / topPower) * plotHeight;
+    padTop +
+    plotHeight -
+    ((clamp(value, minPower, topPower) - minPower) / (topPower - minPower)) *
+      plotHeight;
 
   const yHr = (value) =>
-    padTop + plotHeight - (clamp(value, 0, topHr) / topHr) * plotHeight;
+    padTop +
+    plotHeight -
+    ((clamp(value, minHr, topHr) - minHr) / (topHr - minHr)) * plotHeight;
 
-  // 1. Draw Workout Profile Background Preview (Full workout duration scale)
+  // ----------------------------------------------------------
+  // 1. Workout profile (drawn first so live lines sit on top).
+  //    A filled shape under the target line, an outline, and a vertical
+  //    playhead at the current playback position.
+  // ----------------------------------------------------------
   if (hasWorkout) {
     ctx.save();
     ctx.beginPath();
@@ -177,16 +286,21 @@ export function drawPowerChart() {
     ctx.restore();
   }
 
+  // All text below uses this font. To change text size, edit CANVAS_FONT
+  // in state.js rather than setting sizes here.
   ctx.font = CANVAS_FONT;
 
-  // Grid lines & Power Axis (Left)
+  // ----------------------------------------------------------
+  // 2. Grid lines and the power axis (left). Five lines, minPower to topPower.
+  //    The +0.5 offset keeps 1px lines crisp.
+  // ----------------------------------------------------------
   ctx.fillStyle = "#94a3b8";
   ctx.strokeStyle = "rgba(51, 65, 85, 0.55)";
   ctx.lineWidth = 1;
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
   for (let i = 0; i <= 4; i++) {
-    const value = (topPower / 4) * i;
+    const value = minPower + ((topPower - minPower) / 4) * i;
     const lineY = Math.round(yPower(value)) + 0.5;
     ctx.beginPath();
     ctx.moveTo(padLeft, lineY);
@@ -195,16 +309,19 @@ export function drawPowerChart() {
     ctx.fillText(Math.round(value) + "W", padLeft - 6, lineY);
   }
 
-  // Heart Rate Axis (Right)
+  // ----------------------------------------------------------
+  // 3. Heart rate axis (right). Labels only; the grid lines above are
+  //    shared with the power axis. Rose colour matches the HR series.
+  // ----------------------------------------------------------
   ctx.textAlign = "left";
   for (let i = 0; i <= 4; i++) {
-    const value = (topHr / 4) * i;
+    const value = minHr + ((topHr - minHr) / 4) * i;
     const lineY = Math.round(yHr(value)) + 0.5;
     ctx.fillStyle = "#f43f5e";
     ctx.fillText(Math.round(value) + "bpm", width - padRight + 6, lineY);
   }
 
-  // Time Axis Formatting Helper
+  // Formats seconds as m:ss, or h:mm:ss from one hour up.
   const formatTime = (secs) => {
     const m = Math.floor(Math.max(0, secs) / 60);
     const s = Math.floor(Math.max(0, secs) % 60);
@@ -216,7 +333,9 @@ export function drawPowerChart() {
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
-  // Time Axis Labels
+  // ----------------------------------------------------------
+  // 4. Time axis labels: window start on the left, window end on the right.
+  // ----------------------------------------------------------
   ctx.fillStyle = "#94a3b8";
   ctx.textBaseline = "bottom";
   ctx.textAlign = "left";
@@ -232,14 +351,21 @@ export function drawPowerChart() {
     height - 4,
   );
 
-  // Live Telemetry Series Drawer
+  // ----------------------------------------------------------
+  // 5. Live series.
+  // drawSeries draws one line from history[sample][key].
+  //   - A null reading lifts the pen, so gaps show as gaps instead of
+  //     lines joining across missing data.
+  //   - Points outside the plot area are skipped (and also lift the pen).
+  //   - useHrAxis switches the y mapping from watts to bpm.
+  // ----------------------------------------------------------
   const drawSeries = (key, color, dashed, useHrAxis = false) => {
     if (!history.length) return;
     let penDown = false;
     ctx.beginPath();
     history.forEach((sample, index) => {
       const value = sample[key];
-      if (value === null) {
+      if (!isReading(value)) {
         penDown = false;
         return;
       }
@@ -261,12 +387,17 @@ export function drawPowerChart() {
     ctx.setLineDash([]);
   };
 
+  // Series order is draw order (later lines sit on top). Colours match the
+  // cockpit tiles: indigo target, emerald Kickr, amber pedals, rose HR.
   drawSeries("target", "#818cf8", true, false);
   drawSeries("trainer", "#34d399", false, false);
   drawSeries("pedals", "#fbbf24", false, false);
   drawSeries("hr", "#f43f5e", false, true);
 
-  // Average Heart Rate reference line
+  // ----------------------------------------------------------
+  // 6. Average heart rate: dashed rose line across the plot, with a label
+  //    just above it. Averages every HR reading in the stored history.
+  // ----------------------------------------------------------
   const avgHr = hrValues.length ? average(hrValues) : null;
   if (avgHr !== null) {
     const avgY = Math.round(yHr(avgHr)) + 0.5;
