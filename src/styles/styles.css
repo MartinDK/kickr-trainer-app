@@ -82,6 +82,7 @@ input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
+
 input[type="number"] {
   -moz-appearance: textfield;
 }
@@ -1025,6 +1026,34 @@ button {
   border-radius: var(--radius-control);
 }
 
+.preset-input::-webkit-inner-spin-button,
+.preset-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+  display: none; /* belt and braces: removes the reserved width in Chrome */
+}
+
+.preset-input {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+#ftpInput,
+#wPrimeInput {
+  padding-right: 2.85rem;
+  background-color: transparent;
+}
+
+.input-unit {
+  position: absolute;
+  top: 50%;
+  right: 2em;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--color-brand-text-light);
+}
+
 .preset-input-wrapper {
   position: relative;
   display: flex;
@@ -1677,6 +1706,25 @@ button {
   padding-top: 0.5rem;
 }
 
+#btn-stop-workout {
+  border-color: rgba(99, 102, 241, 0.5);
+  background-color: rgba(79, 70, 229, 0.16);
+  color: white;
+}
+
+#btn-save-csv-workout {
+  border-color: rgba(99, 102, 241, 0.5);
+  background-color: rgba(79, 70, 229, 0.16);
+}
+
+#btn-upload-intervals {
+  color: var(--color-rose);
+}
+
+#btn-workout-builder {
+  color: var(--color-amber);
+}
+
 /* ============================================================
          RESPONSIVE
          ============================================================ */
@@ -1770,7 +1818,7 @@ button {
     align-items: center;
     justify-content: space-between;
     gap: 1.5rem;
-    padding: 0.75rem 1.5rem;
+    padding: 0.75rem 0.75rem;
   }
 
   .device-bar {
@@ -1784,7 +1832,7 @@ button {
   }
 
   .app-header-inner {
-    padding: 0.75rem 2rem;
+    padding: 0.75rem 1rem;
   }
 
   .dashboard {
