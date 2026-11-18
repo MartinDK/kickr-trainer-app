@@ -1,0 +1,39 @@
+<head>
+  <link rel="stylesheet" href="../src/styles/docs.css" />
+</head>
+<body class="docs-page">
+  <header class="brand-icon">
+    <a class="icon" href="../index.html">
+      <div class="" aria-hidden="true">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M13 10V3L4 14h7v7l9-11h-7z"
+          ></path>
+        </svg>
+      </div>
+    </a>
+    <a class="home" href="../index.html"> &larr; Home</a>
+  </header>
+  <article id="doc" class="markdown-body">Loading…</article>
+</body>
+
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+<script>
+  fetch("architecture.md")
+    .then((r) => {
+      if (!r.ok) throw new Error(r.status);
+      return r.text();
+    })
+    .then((md) => {
+      document.getElementById("doc").innerHTML = DOMPurify.sanitize(
+        marked.parse(md),
+      );
+    })
+    .catch(() => {
+      document.getElementById("doc").textContent = "Failed to load docs.";
+    });
+</script>
