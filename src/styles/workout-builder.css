@@ -85,10 +85,32 @@ button:hover {
   gap: 16px;
   align-items: end;
 }
-.home {
-  /* background-color: var(--indigo); */
-  border-color: rgba(99, 102, 241, 0.5);
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+.page-head h1 {
+  font-size: 1.4rem;
+  margin: 0;
+}
+a.home {
+  display: inline-block;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.9rem;
+  padding: 7px 12px;
+  border: 1px solid rgba(99, 102, 241, 0.5);
+  border-radius: 8px;
   background-color: rgba(79, 70, 229, 0.48);
+}
+a.home:hover {
+  border-color: var(--muted);
+}
+a.home:focus-visible {
+  outline: 2px solid var(--indigo);
+  outline-offset: 1px;
 }
 .top > div {
   display: grid;
@@ -135,6 +157,41 @@ svg {
   position: absolute;
   right: 0;
   top: -1.3em;
+}
+.ref.ftp {
+  border-top-color: #8a7a3a;
+  color: var(--amber);
+}
+#labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.chartwrap {
+  margin-top: 18px;
+}
+#labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.stp {
+  position: absolute;
+  top: -18px;
+  font: 0.7rem var(--mono);
+  color: var(--text);
+  white-space: nowrap;
+}
+.stp.mid {
+  transform: translateX(-50%);
+}
+.stp.rs {
+  transform: translateX(4px);
+  color: #22e05a;
+}
+.stp.re {
+  transform: translateX(calc(-100% - 4px));
+  color: #ff2d3d;
 }
 .head,
 .row {
@@ -184,4 +241,67 @@ svg {
   .acts {
     grid-column: 1/-1;
   }
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  align-items: center;
+  margin-top: 10px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.sw.txt {
+  font: 0.7rem var(--mono);
+  font-style: normal;
+}
+.sw.dash {
+  width: 0;
+  height: 14px;
+  border-left: 2px dashed var(--c);
+}
+.zones {
+  flex: 1 1 100%;
+}
+.zhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.zlist {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: 8px;
+}
+.zone {
+  display: grid;
+  gap: 2px;
+  background: var(--track);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--zc);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+.zone b {
+  font: 700 0.8rem var(--mono);
+}
+.zone .zn {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+.zr {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font: 0.85rem var(--mono);
+}
+.zr input {
+  width: 4.5rem;
+  padding: 4px 6px;
 }

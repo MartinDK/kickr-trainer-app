@@ -202,6 +202,7 @@ $("#name").addEventListener("input", (e) => {
   W.name = e.target.value;
   update();
 });
+
 $("#ftp").addEventListener("input", (e) => {
   W.ftp = clamp(parseInt(e.target.value, 10) || 250, 50, 600);
   if (!W.zonesEdited) {
@@ -270,6 +271,7 @@ const defaultZones = () =>
   ZONES.slice(0, 6).map((z) => Math.round((z.hi * W.ftp) / 100));
 
 function renderZones() {
+  if (!$("#zonelist")) return;
   const Z = W.zones;
   $("#zonelist").innerHTML = ZONES.map((z, i) => {
     const lo = i === 0 ? 0 : Z[i - 1] + 1;
@@ -281,7 +283,7 @@ function renderZones() {
   }).join("");
 }
 
-$("#zonelist").addEventListener("input", (e) => {
+$("#zonelist")?.addEventListener("input", (e) => {
   if (e.target.dataset.z === undefined) return;
   const i = +e.target.dataset.z,
     v = parseInt(e.target.value, 10);
@@ -292,7 +294,7 @@ $("#zonelist").addEventListener("input", (e) => {
   if (next) next.textContent = v + 1;
   update();
 });
-$("#zonelist").addEventListener("change", () => {
+$("#zonelist")?.addEventListener("change", () => {
   // Keep limits strictly ascending, then redraw
   W.zones.forEach((v, i) => {
     W.zones[i] = clamp(v, i ? W.zones[i - 1] + 1 : 1, 2000);
@@ -300,7 +302,8 @@ $("#zonelist").addEventListener("change", () => {
   renderZones();
   update();
 });
-$("#zreset").addEventListener("click", () => {
+$("#zreset")?.addEventListener("click", () => {
+  W.ftp = clamp(parseInt($("#ftp").value, 10) || W.ftp, 50, 600);
   W.zones = defaultZones();
   W.zonesEdited = false;
   renderZones();
@@ -315,8 +318,11 @@ const appFtp = (() => {
     return null;
   }
 })();
+if (appFtp) W.ftp = appFtp;
+$("#ftp").value = W.ftp = clamp(parseInt(W.ftp, 10) || 250, 50, 600);
 if (!W.zonesEdited || !Array.isArray(W.zones) || W.zones.length !== 6) {
   W.zones = defaultZones();
   W.zonesEdited = false;
 }
 renderZones();
+renderRows();
