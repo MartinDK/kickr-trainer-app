@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Workout Builder</title>
+    <link rel="stylesheet" href="./src/styles/workout-builder.css" />
+  </head>
+  <body>
+    <main>
+      <header class="page-head">
+        <a class="home" href="./index.html">&larr; Return to Training</a>
+        <h1>Workout Builder</h1>
+      </header>
+
+      <section class="card top">
+        <div>
+          <label for="name">Workout name</label
+          ><input id="name" maxlength="60" />
+        </div>
+        <div>
+          <label for="ftp">FTP (W)</label
+          ><input id="ftp" type="number" min="50" max="600" />
+        </div>
+        <div class="stats">
+          <div class="stat">
+            <span class="lbl">Total time</span><b id="sTime">0:00</b>
+          </div>
+          <div class="stat">
+            <span class="lbl">Avg % FTP</span><b id="sAvg">0</b>
+          </div>
+          <div class="stat">
+            <span class="lbl">Est. TSS</span><b id="sTss">0</b>
+          </div>
+        </div>
+        <div class="zones">
+          <div class="zhead">
+            <span class="lbl">Training zones (W)</span>
+            <button id="zreset" type="button">Reset to FTP</button>
+          </div>
+          <div id="zonelist" class="zlist"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="chartwrap">
+          <svg
+            id="chart"
+            viewBox="0 0 1000 200"
+            preserveAspectRatio="none"
+            aria-label="Workout profile preview"
+            role="img"
+          ></svg>
+          <div id="grid"></div>
+          <div id="labels"></div>
+        </div>
+        <div class="legend" aria-label="Chart legend">
+          <span class="key"
+            ><i class="sw txt" style="color: #22e05a">165</i>Ramp start</span
+          >
+          <span class="key"
+            ><i class="sw txt" style="color: #ff2d3d">189</i>Ramp end</span
+          >
+          <span class="key"
+            ><i class="sw txt" style="color: var(--text)">250</i>Steady
+            power</span
+          >
+          <span class="key"
+            ><i class="sw dash" style="--c: #3a4a70"></i>Interval change</span
+          >
+          <span class="key"
+            ><i class="sw dash" style="--c: #fbbf24"></i>Interval with
+            message</span
+          >
+          <span class="key note">Values in watts at the FTP above.</span>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="head lbl">
+          <span>#</span><span>Type</span><span>Duration</span
+          ><span>Start %</span><span>End %</span><span>Message</span
+          ><span></span>
+        </div>
+        <div id="rows"></div>
+        <div class="bar" style="margin-top: 12px">
+          <button id="add">+ Add step</button>
+          <span class="note"
+            >Duration as m:ss or minutes. Values are % of FTP.</span
+          >
+        </div>
+      </section>
+
+      <section class="card bar">
+        <button class="primary" data-export="mrc">Download .mrc (% FTP)</button>
+        <button data-export="erg">Download .erg (watts)</button>
+        <span class="note"
+          >Load the file in the trainer app with its workout file button. ERG
+          converts using the FTP above. Messages show for 10 s (or the step
+          length if shorter).</span
+        >
+      </section>
+    </main>
+  </body>
+  <script src="./src/workout-builder/workout-builder.js"></script>
+</html>
