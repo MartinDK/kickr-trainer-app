@@ -1,6 +1,9 @@
 Here's what I'd add, in the order I'd do it.
 
-**1. Make the zones do something.** They're display-only right now. Colouring the chart's steps by zone (or just showing a "Z4" tag on each row) would make them useful. There's also an inconsistency to resolve: steps are in % FTP, but zones are in watts and don't rescale once you've edited them. If you change FTP after editing zones, the zone boundaries and the steps drift apart. I'd store zones as % FTP internally and display watts.
+✅ **1. Make the zones do something.** They're display-only right now.
+✅ Colouring the chart's steps by zone (or just showing a "Z4" tag on each row) would make them useful.
+✅ If you change FTP after editing zones, the zone boundaries and the steps drift apart. I'd store zones as % FTP internally and display watts.
+✅ There's also an inconsistency to resolve: steps are in % FTP, but zones are in watts and don't rescale once you've edited them.
 
 **2. Repeat blocks.** Most real workouts are "4 × (5 min hard / 3 min easy)", and right now you have to duplicate rows by hand. A "repeat" control that takes a group of steps and a count would save the most time. It could expand into plain steps on export, so the file format doesn't change.
 

@@ -47,9 +47,14 @@ function renderRows() {
         <option value="steady"${s.type === "steady" ? " selected" : ""}>Steady</option>
         <option value="ramp"${s.type === "ramp" ? " selected" : ""}>Ramp</option>
       </select>
-      <input data-f="dur" value="${fmt(s.dur)}" inputmode="numeric" aria-label="Duration">
+      <input data-f="min" type="number" min="0" max="999" value="${Math.floor(s.dur / 60)}" aria-label="Minutes">
+      <input data-f="sec" type="number" min="0" value="${Math.round(s.dur % 60)}" aria-label="Seconds">
       <input data-f="a" type="number" min="0" max="300" value="${s.a}" aria-label="Start percent FTP">
       <input data-f="b" type="number" min="0" max="300" value="${s.type === "ramp" ? s.b : s.a}" aria-label="End percent FTP"${s.type === "steady" ? " disabled" : ""}>
+      <span class="zsel">
+        <select data-f="zone" data-end="0" aria-label="Start zone">${zoneOpts()}</select>
+        <select data-f="zone" data-end="1" aria-label="End zone"${s.type === "steady" ? " disabled" : ""}>${zoneOpts()}</select>
+      </span>
       <input data-f="text" value="${esc(s.text)}" placeholder="Message (optional)" maxlength="80" aria-label="Message">
       <span class="acts">
         <button data-act="up" aria-label="Move up"${i === 0 ? " disabled" : ""}>↑</button>
@@ -79,7 +84,51 @@ function update() {
   });
   const np = vals.length ? (fourth / vals.length) ** 0.25 : 0;
   const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
-  $("#sTime").textContent =
+
+  // Set a tile value; for tiles with a unit (<b>0<i>W</i></b>) only the text node changes
+  const set = (id, v) => {
+    const el = $(id);
+    if (!el) return;
+    const n = el.firstChild;
+    if (el.children.length && n && n.nodeType === 3) n.nodeValue = v;
+    else el.textContent = v;
+  };
+
+  // np and avg above are in % FTP, so convert to watts
+  const avgW = (avg * W.ftp) / 100,
+    npW = (np * W.ftp) / 100,
+    IF = np / 100,
+    tss = (total / 3600) * IF ** 2 * 100,
+    kj = (avgW * total) / 1000,
+    kcal = kj / (4.184 * 0.24); // ~24% gross efficiency, so kcal is about equal to kJ
+
+  // Share of energy from carbohydrate rises with intensity
+  const frac =
+    IF < 0.55
+      ? 0.35
+      : IF < 0.75
+        ? 0.5
+        : IF < 0.9
+          ? 0.7
+          : IF < 1.05
+            ? 0.85
+            : 0.95;
+  const carbs = (kcal * frac) / 4; // 4 kcal per gram
+
+  // In-session carbohydrate guideline (g/h) by duration; intake = rate x hours
+  const hrs = total / 3600;
+  const [rLo, rHi] =
+    total < 2700
+      ? [0, 0]
+      : total < 4500
+        ? [0, 30]
+        : total < 7200
+          ? [30, 60]
+          : [60, 90];
+  const choLo = Math.round(rLo * hrs),
+    choHi = Math.round(rHi * hrs);
+
+  const hms =
     total >= 3600
       ? Math.floor(total / 3600) +
         ":" +
@@ -87,8 +136,23 @@ function update() {
         ":" +
         String(total % 60).padStart(2, "0")
       : fmt(total);
-  $("#sAvg").textContent = Math.round(avg);
-  $("#sTss").textContent = Math.round((total / 3600) * (np / 100) ** 2 * 100);
+
+  set("#sTime", hms);
+  set(
+    "#sCount",
+    W.steps.length + (W.steps.length === 1 ? " interval" : " intervals"),
+  );
+  set("#sAvg", Math.round(avg));
+  set("#sAvgW", Math.round(avgW));
+  set("#sNP", Math.round(npW));
+  set("#sVI", avgW ? (npW / avgW).toFixed(2) : "1.00");
+  set("#sIF", IF.toFixed(2));
+  set("#sTss", Math.round(tss));
+  set("#sTssH", total ? Math.round((tss / total) * 3600) : 0);
+  set("#sKj", Math.round(kj));
+  set("#sKcal", Math.round(kcal));
+  set("#sCarb", Math.round(carbs));
+  set("#sCho", choHi ? (choLo ? `${choLo}–${choHi}` : `≤${choHi}`) : "0");
 
   const peak = Math.max(120, ...W.steps.map((s) => Math.max(s.a, s.b)));
 
@@ -96,22 +160,92 @@ function update() {
 
   const X = (t) => (total ? (t / total) * 1000 : 0);
   const Y = (v) => 200 - (v / ymax) * 200;
+
+  // Per-interval layout: every step gets at least MINPX, the rest share what's left
+  const MINPX = 30;
+  const avail = Math.max(300, $(".chartscroll").clientWidth - 64); // 64 = zone gutter (4rem)
+  const fixed = new Set();
+  let px;
+  for (;;) {
+    const free = avail - fixed.size * MINPX;
+    const freeDur = W.steps.reduce(
+      (t, s, i) => (fixed.has(i) ? t : t + s.dur),
+      0,
+    );
+    px = W.steps.map((s, i) =>
+      fixed.has(i)
+        ? MINPX
+        : free > 0 && freeDur
+          ? (s.dur / freeDur) * free
+          : MINPX,
+    );
+    let grew = false;
+    px.forEach((v, i) => {
+      if (!fixed.has(i) && v < MINPX) {
+        fixed.add(i);
+        grew = true;
+      }
+    });
+    if (!grew) break;
+  }
+  const chartW = px.reduce((a, b) => a + b, 0);
+  const st = [],
+    en = [];
+  let acc = 0;
+  px.forEach((v) => {
+    st.push(acc / chartW);
+    acc += v;
+    en.push(acc / chartW);
+  });
+  $("#chartpad").style.minWidth = `${chartW + 64}px`;
+
   let d = "M0,200",
     t = 0,
     cues = "";
-  W.steps.forEach((s) => {
-    d += ` L${X(t)},${Y(s.a)}`;
-    if (s.text || t > 0)
-      cues += `<line x1="${X(t)}" x2="${X(t)}" y1="0" y2="200" stroke="${s.text ? "#fbbf24" : "#3a4a70"}" stroke-width="1.5" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"/>`;
-    t += s.dur;
-    d += ` L${X(t)},${Y(s.type === "ramp" ? s.b : s.a)}`;
+
+  W.steps.forEach((s, i) => {
+    const x0 = st[i] * 1000,
+      x1 = en[i] * 1000;
+    d += ` L${x0},${Y(s.a)}`;
+    if (s.text || i > 0)
+      cues += `<line x1="${x0}" x2="${x0}" y1="0" y2="200" stroke="${s.text ? "#fbbf24" : "#3a4a70"}" stroke-width="1.5" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"/>`;
+    d += ` L${x1},${Y(s.type === "ramp" ? s.b : s.a)}`;
   });
+
   const line = d.replace("M0,200 L", "M");
+  // Zone bands, clipped to the area under the profile.
+  // Zone limits are stored in watts; the chart's y-axis is % FTP.
+  let bands = "";
+  if (Array.isArray(W.zones) && W.zones.length === 6) {
+    const edges = [0, ...W.zones.map((w) => (w / W.ftp) * 100), ymax];
+    ZONES.forEach((z, i) => {
+      const lo = Math.min(edges[i], ymax),
+        hi = Math.min(edges[i + 1], ymax);
+      if (hi <= lo) return;
+      bands += `<rect x="0" y="${Y(hi)}" width="1000" height="${Y(lo) - Y(hi) + 0.5}" fill="${z.c}"/>`;
+    });
+  }
   $("#chart").innerHTML =
-    `<path d="${d} L1000,200 Z" fill="rgba(129,140,248,.2)"/>` +
+    `<defs><clipPath id="zclip"><path d="${d} L1000,200 Z"/></clipPath></defs>` +
+    `<g clip-path="url(#zclip)" opacity=".6">${bands}</g>` +
     `<path d="${line}" fill="none" stroke="#818cf8" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>` +
     cues;
+  // Zone power ranges in the right-hand gutter
+  let zl = "";
+  if (Array.isArray(W.zones) && W.zones.length === 6) {
+    const edges = [0, ...W.zones.map((w) => (w / W.ftp) * 100), Infinity];
+    ZONES.forEach((z, i) => {
+      const lo = Math.min(edges[i], ymax),
+        hi = Math.min(edges[i + 1], ymax);
 
+      if (i < 6 && ((hi - lo) / ymax) * 200 < 11) return;
+
+      const txt = i === 0 ? 0 : W.zones[i - 1] + 1;
+
+      zl += `<div class="zl" style="top:${(1 - lo / ymax) * 100}%;--zc:${z.c}">${txt}</div>`;
+    });
+  }
+  $("#zlabels").innerHTML = zl;
   // Power scale: chart geometry is in % FTP, labels are in watts
   const toW = (p) => Math.round((p * W.ftp) / 100);
   const ymaxW = (ymax * W.ftp) / 100;
@@ -124,25 +258,26 @@ function update() {
   grid += `<div class="ref ftp" style="top:${(Y(100) / 200) * 100}%"><span>FTP ${W.ftp} W</span></div>`;
   $("#grid").innerHTML = grid;
 
-  let lt = 0,
-    labels = "";
+  let labels = "";
   const lab = (pct, txt, cls) =>
     `<div class="stp ${cls}" style="left:${pct}%">${txt}</div>`;
-
-  W.steps.forEach((s) => {
-    if (total) {
-      const w = s.dur / total,
-        l = (lt / total) * 100,
-        r = ((lt + s.dur) / total) * 100;
-      if (s.type === "ramp") {
-        labels += lab(l, toW(s.a), "rs") + lab(r, toW(s.b), "re");
-      } else if (w >= 0.04) labels += lab((l + r) / 2, toW(s.a), "mid");
-    }
-    lt += s.dur;
+  W.steps.forEach((s, i) => {
+    const l = st[i] * 100,
+      r = en[i] * 100;
+    if (s.type === "ramp")
+      labels += lab(l, toW(s.a), "rs") + lab(r, toW(s.b), "re");
+    else labels += lab((l + r) / 2, toW(s.a), "mid");
   });
 
   $("#labels").innerHTML = labels;
 
+  // Interval numbers under the chart, centred on each step
+  let nums = "";
+  W.steps.forEach((s, i) => {
+    nums += `<div class="num" style="left:${((st[i] + en[i]) / 2) * 100}%">${i + 1}</div>`;
+  });
+  $("#nums").innerHTML = nums;
+  syncZoneSelects();
   $("#name").value !== W.name && ($("#name").value = W.name);
   try {
     localStorage.setItem(KEY, JSON.stringify(W));
@@ -155,8 +290,21 @@ rows.addEventListener("input", (e) => {
   if (!row) return;
   const s = W.steps[+row.dataset.i],
     f = e.target.dataset.f;
-  if (f === "dur") {
-    const d = parseDur(e.target.value);
+  if (e.target.dataset.f === "zone") {
+    const pct = zonePct(+e.target.value);
+    if (e.target.dataset.end === "1") s.b = pct;
+    else {
+      s.a = pct;
+      if (s.type === "steady") s.b = pct;
+    }
+    renderRows();
+    return;
+  }
+  if (f === "min" || f === "sec") {
+    const [m, sc] = row.querySelectorAll('[data-f="min"],[data-f="sec"]');
+    const d =
+      clamp(parseInt(m.value, 10) || 0, 0, 999) * 60 +
+      clamp(parseInt(sc.value, 10) || 0, 0, 3599);
     if (d > 0) s.dur = d;
   } else if (f === "a" || f === "b") {
     const v = clamp(parseFloat(e.target.value) || 0, 0, 300);
@@ -168,8 +316,29 @@ rows.addEventListener("input", (e) => {
 rows.addEventListener("change", (e) => {
   const row = e.target.closest(".row");
   if (!row) return;
-  const s = W.steps[+row.dataset.i];
-  if (e.target.dataset.f === "type") {
+  const s = W.steps[+row.dataset.i],
+    f = e.target.dataset.f;
+
+  if (f === "zone") {
+    const pct = zonePct(+e.target.value);
+    if (e.target.dataset.end === "1") s.b = pct;
+    else {
+      s.a = pct;
+      if (s.type === "steady") s.b = pct;
+    }
+    renderRows();
+    return;
+  }
+
+  if (f === "min" || f === "sec") {
+    // Normalise in place (90 s -> 1 min 30 s) without re-rendering, so Tab from Min to Sec keeps focus
+    const [m, sc] = row.querySelectorAll('[data-f="min"],[data-f="sec"]');
+    m.value = Math.floor(s.dur / 60);
+    sc.value = Math.round(s.dur % 60);
+    return;
+  }
+
+  if (f === "type") {
     s.type = e.target.value;
     if (s.type === "steady") s.b = s.a;
   }
@@ -205,12 +374,12 @@ $("#name").addEventListener("input", (e) => {
 
 $("#ftp").addEventListener("input", (e) => {
   W.ftp = clamp(parseInt(e.target.value, 10) || 250, 50, 600);
-  if (!W.zonesEdited) {
-    W.zones = defaultZones();
-    renderZones();
-  }
+  if (!W.zonesEdited) W.zones = defaultZones();
+  else scaleZones();
+  renderZones();
   update();
 });
+
 function build(kind) {
   const name = (W.name.trim() || "Workout").replace(/[\t\r\n]+/g, " ");
   const file =
@@ -270,6 +439,16 @@ const ZONES = [
 const defaultZones = () =>
   ZONES.slice(0, 6).map((z) => Math.round((z.hi * W.ftp) / 100));
 
+// Edited zones scale with FTP, measured from the FTP they were last edited at
+function rebaseZones() {
+  W.zonesBase = { ftp: W.ftp, zones: [...W.zones] };
+}
+function scaleZones() {
+  const b = W.zonesBase;
+  if (b && b.zones.length === 6)
+    W.zones = b.zones.map((w) => Math.round((w * W.ftp) / b.ftp));
+}
+
 function renderZones() {
   if (!$("#zonelist")) return;
   const Z = W.zones;
@@ -290,6 +469,7 @@ $("#zonelist")?.addEventListener("input", (e) => {
   if (!(v >= 0)) return;
   W.zones[i] = v;
   W.zonesEdited = true;
+  rebaseZones();
   const next = $(`[data-lo="${i + 1}"]`);
   if (next) next.textContent = v + 1;
   update();
@@ -299,6 +479,7 @@ $("#zonelist")?.addEventListener("change", () => {
   W.zones.forEach((v, i) => {
     W.zones[i] = clamp(v, i ? W.zones[i - 1] + 1 : 1, 2000);
   });
+  rebaseZones();
   renderZones();
   update();
 });
@@ -318,11 +499,105 @@ const appFtp = (() => {
     return null;
   }
 })();
+
 if (appFtp) W.ftp = appFtp;
 $("#ftp").value = W.ftp = clamp(parseInt(W.ftp, 10) || 250, 50, 600);
 if (!W.zonesEdited || !Array.isArray(W.zones) || W.zones.length !== 6) {
   W.zones = defaultZones();
   W.zonesEdited = false;
 }
+if (W.zonesEdited) {
+  if (W.zonesBase) scaleZones();
+  else rebaseZones();
+}
 renderZones();
+
+const zoneOpts = () =>
+  ZONES.map((z, i) => `<option value="${i}">${z.n}</option>`).join("");
+
+// Zone index for a % FTP value, using the current (editable) watt limits
+function zoneOf(pct) {
+  const w = (pct * W.ftp) / 100;
+  const i = W.zones.findIndex((hi) => w <= hi);
+  return i === -1 ? 6 : i;
+}
+
+// % FTP at the middle of a zone's watt range (Z7 is open-ended, so use 115% of the Z6 limit)
+function zonePct(i) {
+  const Z = W.zones;
+  const lo = i === 0 ? 0 : Z[i - 1] + 1;
+  const mid = i < 6 ? (lo + Z[i]) / 2 : Z[5] * 1.15;
+  return clamp(Math.round((mid / W.ftp) * 100), 0, 300);
+}
+
+function syncZoneSelects() {
+  if (!Array.isArray(W.zones)) return;
+  document.querySelectorAll("#rows .row").forEach((row) => {
+    const s = W.steps[+row.dataset.i];
+    const [a, b] = row.querySelectorAll('[data-f="zone"]');
+    if (!s) return;
+    if (a) a.value = zoneOf(s.a);
+    if (b) b.value = zoneOf(s.type === "ramp" ? s.b : s.a);
+  });
+}
+
+// Slow down trackpad/wheel stepping on focused number fields
+const WHEEL_PX = 60; // scroll distance per step; raise it to slow things down
+const WKEY = "trainingHub.builder.wheelInvert";
+let wheelAcc = 0;
+let wheelFlip = null; // null = auto, true/false = user choice
+try {
+  const v = localStorage.getItem(WKEY);
+  if (v === "1") wheelFlip = true;
+  else if (v === "0") wheelFlip = false;
+} catch {}
+
+const wheelInv = $("#wheelInv");
+if (wheelInv) {
+  wheelInv.checked = !!wheelFlip;
+  wheelInv.addEventListener("change", () => {
+    wheelFlip = wheelInv.checked;
+    try {
+      localStorage.setItem(WKEY, wheelFlip ? "1" : "0");
+    } catch {}
+  });
+}
+
+document.addEventListener(
+  "wheel",
+  (e) => {
+    const el = e.target;
+    if (
+      !(el instanceof HTMLInputElement) ||
+      el.type !== "number" ||
+      document.activeElement !== el
+    )
+      return;
+    e.preventDefault();
+
+    // Auto mode: Safari reports natural scrolling; flip so it feels intuitive
+    if (
+      wheelFlip === null &&
+      e.webkitDirectionInvertedFromDevice !== undefined
+    ) {
+      wheelInv && (wheelInv.checked = e.webkitDirectionInvertedFromDevice);
+    }
+    const flip =
+      wheelFlip !== null
+        ? wheelFlip
+        : e.webkitDirectionInvertedFromDevice === true;
+
+    wheelAcc += e.deltaMode === 0 ? e.deltaY : e.deltaY * 40;
+    const steps = Math.trunc(wheelAcc / WHEEL_PX);
+    if (!steps) return;
+    wheelAcc -= steps * WHEEL_PX;
+    const step = parseFloat(el.step) || 1;
+    const lo = el.min !== "" ? +el.min : -Infinity;
+    const hi = el.max !== "" ? +el.max : Infinity;
+    const dir = flip ? 1 : -1;
+    el.value = clamp((parseFloat(el.value) || 0) + dir * steps * step, lo, hi);
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  },
+  { passive: false },
+);
 renderRows();

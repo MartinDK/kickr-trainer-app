@@ -7,6 +7,54 @@
     <link rel="stylesheet" href="./src/styles/workout-builder.css" />
   </head>
   <body>
+    <svg
+      style="
+        position: absolute;
+        width: 0;
+        height: 0;
+        overflow: hidden;
+        pointer-events: none;
+      "
+      aria-hidden="true"
+    >
+      <symbol id="i-clock" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </symbol>
+      <symbol id="i-bolt" viewBox="0 0 24 24">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+      </symbol>
+      <symbol id="i-pulse" viewBox="0 0 24 24">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+      </symbol>
+      <symbol id="i-gauge" viewBox="0 0 24 24">
+        <path d="M3.34 19a10 10 0 1 1 17.32 0" />
+        <path d="m12 14 4-4" />
+      </symbol>
+      <symbol id="i-trend" viewBox="0 0 24 24">
+        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+        <polyline points="16 7 22 7 22 13" />
+      </symbol>
+      <symbol id="i-battery" viewBox="0 0 24 24">
+        <rect x="2" y="7" width="16" height="10" rx="2" />
+        <line x1="22" y1="11" x2="22" y2="13" />
+      </symbol>
+      <symbol id="i-flame" viewBox="0 0 24 24">
+        <path
+          d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"
+        />
+      </symbol>
+      <symbol id="i-fork" viewBox="0 0 24 24">
+        <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
+        <path d="M7 2v20" />
+        <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" />
+      </symbol>
+      <symbol id="i-bars" viewBox="0 0 24 24">
+        <line x1="12" y1="20" x2="12" y2="10" />
+        <line x1="18" y1="20" x2="18" y2="4" />
+        <line x1="6" y1="20" x2="6" y2="16" />
+      </symbol>
+    </svg>
     <main>
       <header class="page-head">
         <a class="home" href="./index.html">&larr; Return to Training</a>
@@ -14,46 +62,99 @@
       </header>
 
       <section class="card top">
-        <div>
-          <label for="name">Workout name</label
-          ><input id="name" maxlength="60" />
+        <div class="field grow">
+          <label for="name">Workout name</label>
+          <input id="name" maxlength="60" />
         </div>
-        <div>
-          <label for="ftp">FTP (W)</label
-          ><input id="ftp" type="number" min="50" max="600" />
+        <div class="field">
+          <label for="ftp">FTP (W)</label>
+          <input id="ftp" type="number" min="50" max="600" />
         </div>
-        <div class="stats">
-          <div class="stat">
-            <span class="lbl">Total time</span><b id="sTime">0:00</b>
+
+        <div class="metrics">
+          <div class="m g-time">
+            <span class="lbl"
+              ><svg class="ic"><use href="#i-clock" /></svg>Total time</span
+            ><b id="sTime">0:00</b><small id="sCount">&nbsp;</small>
           </div>
-          <div class="stat">
-            <span class="lbl">Avg % FTP</span><b id="sAvg">0</b>
+          <div class="m g-power">
+            <span class="lbl"
+              ><svg class="ic"><use href="#i-bolt" /></svg>Avg power</span
+            ><b id="sAvgW">0<i>W</i></b
+            ><small><span id="sAvg">0</span>% FTP</small>
           </div>
-          <div class="stat">
-            <span class="lbl">Est. TSS</span><b id="sTss">0</b>
+          <div class="m g-power">
+            <span class="lbl"
+              ><svg class="ic"><use href="#i-pulse" /></svg>Norm. power</span
+            ><b id="sNP">0<i>W</i></b
+            ><small>VI <span id="sVI">1.00</span></small>
+          </div>
+          <div class="m g-int">
+            <span class="lbl"
+              ><svg class="ic"><use href="#i-gauge" /></svg>Intensity
+              factor</span
+            ><b id="sIF">0.00</b><small>NP ÷ FTP</small>
+          </div>
+          <div class="m g-fuel">
+            <span class="lbl"
+              ><svg class="ic"><use href="#i-fork" /></svg>Carbs</span
+            >
+            <span class="lbl r">CHO intake</span>
+            <b id="sCarb">0<i>g</i></b>
+            <b id="sCho">0<i>g</i></b>
+            <small>burned</small>
+            <small>to eat during</small>
+          </div>
+          <div class="m g-energy">
+            <span class="lbl"
+              ><svg class="ic"><use href="#i-battery" /></svg>Work</span
+            ><b id="sKj">0<i>kJ</i></b
+            ><small>&nbsp;</small>
+          </div>
+          <div class="m g-energy">
+            <span class="lbl"
+              ><svg class="ic"><use href="#i-flame" /></svg>Calories</span
+            ><b id="sKcal">0<i>kcal</i></b
+            ><small>~24% efficiency</small>
+          </div>
+          <div class="m g-int">
+            <span class="lbl"
+              ><svg class="ic"><use href="#i-trend" /></svg>Est. TSS</span
+            ><b id="sTss">0</b><small><span id="sTssH">0</span> per hour</small>
           </div>
         </div>
+
         <div class="zones">
           <div class="zhead">
-            <span class="lbl">Training zones (W)</span>
+            <span class="lbl zt"
+              ><svg class="ic"><use href="#i-bars" /></svg>Training zones
+              (W)</span
+            >
             <button id="zreset" type="button">Reset to FTP</button>
           </div>
           <div id="zonelist" class="zlist"></div>
         </div>
       </section>
 
-      <section class="card">
-        <div class="chartwrap">
-          <svg
-            id="chart"
-            viewBox="0 0 1000 200"
-            preserveAspectRatio="none"
-            aria-label="Workout profile preview"
-            role="img"
-          ></svg>
-          <div id="grid"></div>
-          <div id="labels"></div>
+      <section class="card chart-section">
+        <div class="chartscroll">
+          <div class="chartpad" id="chartpad">
+            <div class="chartwrap">
+              <svg
+                id="chart"
+                viewBox="0 0 1000 200"
+                preserveAspectRatio="none"
+                aria-label="Workout profile preview"
+                role="img"
+              ></svg>
+              <div id="grid"></div>
+              <div id="labels"></div>
+              <div id="zlabels"></div>
+              <div id="nums"></div>
+            </div>
+          </div>
         </div>
+
         <div class="legend" aria-label="Chart legend">
           <span class="key"
             ><i class="sw txt" style="color: #22e05a">165</i>Ramp start</span
@@ -73,14 +174,26 @@
             message</span
           >
           <span class="key note">Values in watts at the FTP above.</span>
+          <label
+            class="note"
+            style="
+              display: flex;
+              gap: 6px;
+              align-items: center;
+              text-transform: none;
+              letter-spacing: 0;
+            "
+          >
+            <input type="checkbox" id="wheelInv" /> Reverse Scroll
+          </label>
         </div>
       </section>
 
       <section class="card">
         <div class="head lbl">
-          <span>#</span><span>Type</span><span>Duration</span
-          ><span>Start %</span><span>End %</span><span>Message</span
-          ><span></span>
+          <span>#</span><span>Type</span><span>Min</span><span>Sec</span
+          ><span>Start %</span><span>End %</span><span>Zone</span
+          ><span>Message</span><span></span>
         </div>
         <div id="rows"></div>
         <div class="bar" style="margin-top: 12px">
