@@ -843,16 +843,16 @@ button {
   box-shadow: 0 4px 12px -4px rgba(79, 70, 229, 0.7);
 }
 
-.mode-tab-button--on-trainer::after {
-  content: "";
-  display: inline-block;
-  width: 0.4375rem;
-  height: 0.4375rem;
-  margin-left: 0.375rem;
-  vertical-align: middle;
-  border-radius: 50%;
-  background-color: var(--color-text-secondary);
-}
+/* .mode-tab-button--on-trainer::after { */
+/*   content: ""; */
+/*   display: inline-block; */
+/*   width: 0.4375rem; */
+/*   height: 0.4375rem; */
+/*   margin-left: 0.375rem; */
+/*   vertical-align: middle; */
+/*   border-radius: 50%; */
+/*   background-color: var(--color-text-secondary); */
+/* } */
 
 .mode-tab-list--trainer-connected .mode-tab-button--on-trainer::after {
   background-color: var(--color-emerald);
@@ -1736,7 +1736,7 @@ button {
 
 @media (min-width: 480px) {
   .mode-tab-list {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
 
@@ -1860,7 +1860,7 @@ button {
   }
 
   .control-row {
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    grid-template-columns: 1fr;
   }
 
   .hrv-stat-grid {
