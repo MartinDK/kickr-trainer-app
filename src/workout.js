@@ -299,6 +299,7 @@ export async function loadWorkoutFile(file) {
       (parsed.unit === "percent" ? "% FTP" : "watts");
     const playButton = $("workoutPlayBtn");
     playButton.disabled = false;
+    $("btn-stop-workout").disabled = false;
     playButton.textContent = "Play Workout";
     playButton.classList.replace("button--secondary", "button--primary");
     $("workoutFileLabel").classList.replace(
