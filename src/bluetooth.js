@@ -513,9 +513,11 @@ export function renderLive(now = Date.now()) {
 
   if (ride.targetSource === "workout") {
     const info = workoutValueAt(workout.elapsed);
-    const start = info.segmentStart ?? workout.elapsed - ride.intervalSeconds;
-    intervalElapsed = workout.elapsed - start;
-    intervalTotal = info.segmentEnd - start;
+    const total = info.segmentEnd - info.segmentStart;
+    if (total > 0) {
+      intervalElapsed = workout.elapsed - info.segmentStart;
+      intervalTotal = total;
+    }
   }
   updateInterval(intervalElapsed, intervalTotal);
   renderPowerMetrics();

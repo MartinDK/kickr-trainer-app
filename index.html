@@ -141,10 +141,18 @@
             aria-label="Trainer mode"
           >
             <button
-              id="tab-erg"
+              id="tab-workout"
               type="button"
               class="mode-tab-button mode-tab-button--active"
-              aria-pressed="true"
+              aria-pressed="false"
+            >
+              Workout
+            </button>
+            <button
+              id="tab-erg"
+              type="button"
+              class="mode-tab-button"
+              aria-pressed="false"
             >
               ERG Mode
             </button>
@@ -172,18 +180,10 @@
             >
               Simulation
             </button>
-            <button
-              id="tab-workout"
-              type="button"
-              class="mode-tab-button"
-              aria-pressed="false"
-            >
-              Workout
-            </button>
           </div>
 
           <!-- TAB 1: ERG MODE -->
-          <div id="panel-erg" class="mode-panel">
+          <div id="panel-erg" class="mode-panel is-hidden">
             <div>
               <h3 class="mode-panel-title">Constant Wattage (ERG)</h3>
             </div>
@@ -498,15 +498,12 @@
             </button>
           </div>
           <!-- TAB 5: WORKOUT (moved from its own card; all IDs unchanged) -->
-          <div id="panel-workout" class="mode-panel is-hidden">
+          <div id="panel-workout" class="mode-panel">
             <div class="card-header">
               <div class="card-heading-group">
                 <h3 id="workoutTitle" class="mode-panel-title">
                   Workout Player (.mrc / .erg)
                 </h3>
-                <p id="workoutTitleDisplay" class="card-subtitle">
-                  No workout loaded
-                </p>
               </div>
             </div>
 
@@ -525,7 +522,7 @@
                 class="button button--ghost button--small"
                 disabled
               >
-                Stop &amp; reset
+                Restart Workout
               </button>
               <label
                 id="workoutFileLabel"
@@ -542,6 +539,33 @@
             </div>
 
             <div class="stat-grid">
+              <div class="stat-tile">
+                <label class="stat-label">Mode</label>
+                <div class="workout-mode-controls">
+                  <div
+                    class="toggle-group"
+                    role="group"
+                    aria-label="Workout mode"
+                  >
+                    <button
+                      id="btnModeErg"
+                      type="button"
+                      class="toggle-button toggle-button--active"
+                      aria-pressed="true"
+                    >
+                      ERG Mode
+                    </button>
+                    <button
+                      id="btnModeRes"
+                      type="button"
+                      class="toggle-button"
+                      aria-pressed="false"
+                    >
+                      Resistance Mode
+                    </button>
+                  </div>
+                </div>
+              </div>
               <div class="stat-tile stat-tile--with-input">
                 <div class="form-field">
                   <label class="stat-label" for="ftpInput">RIDER FTP</label>
@@ -618,34 +642,43 @@
             </div>
 
             <div class="workout-mode-row">
-              <div class="workout-mode-controls">
-                <span class="workout-mode-label">Mode:</span>
-                <div
-                  class="toggle-group"
-                  role="group"
-                  aria-label="Workout mode"
-                >
-                  <button
-                    id="btnModeErg"
-                    type="button"
-                    class="toggle-button toggle-button--active"
-                    aria-pressed="true"
-                  >
-                    ERG Mode
-                  </button>
-                  <button
-                    id="btnModeRes"
-                    type="button"
-                    class="toggle-button"
-                    aria-pressed="false"
-                  >
-                    Resistance Mode
-                  </button>
-                </div>
-              </div>
-              <span id="workoutModeDisplay" class="workout-mode-display"
-                >ERG (% FTP)</span
+              <!-- <div class="workout-mode-controls"> -->
+              <!--   <span class="workout-mode-label">Mode:</span> -->
+              <!--   <div -->
+              <!--     class="toggle-group" -->
+              <!--     role="group" -->
+              <!--     aria-label="Workout mode" -->
+              <!--   > -->
+              <!--     <button -->
+              <!--       id="btnModeErg" -->
+              <!--       type="button" -->
+              <!--       class="toggle-button toggle-button--active" -->
+              <!--       aria-pressed="true" -->
+              <!--     > -->
+              <!--       ERG Mode -->
+              <!--     </button> -->
+              <!--     <button -->
+              <!--       id="btnModeRes" -->
+              <!--       type="button" -->
+              <!--       class="toggle-button" -->
+              <!--       aria-pressed="false" -->
+              <!--     > -->
+              <!--       Resistance Mode -->
+              <!--     </button> -->
+              <!--   </div> -->
+              <!-- </div> -->
+
+              <p
+                id="workoutTitleDisplay"
+                class="card-subtitle workout-name-display"
               >
+                <span>Workout Name: </span>
+                No workout loaded
+              </p>
+
+              <span id="workoutModeDisplay" class="workout-mode-display"
+              <!--   >ERG (% FTP)</span -->
+              <!-- > -->
             </div>
           </div>
         </section>
@@ -782,17 +815,16 @@
           </article>
 
           <!-- Normalised Power + DFA a1 gauge -->
-          <article class="cockpit-tile cockpit-tile--hr">
-            <span class="metric-label">NP</span>
+          <article class="cockpit-tile cockpit-tile--right">
             <div class="metric-reading">
-              <div class="metric-group">
-                <span
-                  id="npDisplay"
-                  class="metric-value metric-value--hero-sm metric-value--lime"
-                  >--</span
-                >
-                <span class="metric-unit">W</span>
-              </div>
+              <button
+                id="btnNextInterval"
+                type="button"
+                class="button button--primary button--block"
+                disabled
+              >
+                Next interval ›
+              </button>
             </div>
 
             <div class="dfa">
@@ -860,6 +892,17 @@
               <span id="tssDisplay" class="metric-value metric-value--medium"
                 >0.0</span
               >
+            </div>
+            <div class="strip-item">
+              <span class="metric-label">NP</span>
+              <span class="strip-item-value">
+                <span
+                  id="npDisplay"
+                  class="metric-value metric-value--medium metric-value--lime"
+                  >---</span
+                >
+                <span class="metric-unit">W</span>
+              </span>
             </div>
             <div class="strip-item strip-item--wbal">
               <div class="wbal-head">

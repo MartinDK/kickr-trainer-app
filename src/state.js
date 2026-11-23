@@ -208,7 +208,7 @@ Object.values(devices).forEach((d) =>
  *   sendStatus  last status line shown under the controls
  */
 export const control = {
-  viewMode: "erg",
+  viewMode: "workout",
   activeMode: "erg",
   sim: { weight: 75, crr: 0.004, grade: 0 },
   sendTimer: null,
