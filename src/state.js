@@ -125,7 +125,7 @@ export const SIM_WIND_COEFFICIENT = 0.4;
 /** How many seconds of samples telemetry.history keeps (the chart's rolling window). */
 export const HISTORY_SECONDS = 300;
 /** Trainer control modes. Each has a tab (tab-<mode>) and a panel (panel-<mode>). */
-export const MODES = ["erg", "resistance", "level", "sim"];
+export const MODES = ["erg", "resistance", "level", "sim", "workout"];
 /** Display names for the modes. */
 export const MODE_NAMES = {
   erg: "ERG",
@@ -208,7 +208,7 @@ Object.values(devices).forEach((d) =>
  *   sendStatus  last status line shown under the controls
  */
 export const control = {
-  viewMode: "erg",
+  viewMode: "workout",
   activeMode: "erg",
   sim: { weight: 75, crr: 0.004, grade: 0 },
   sendTimer: null,

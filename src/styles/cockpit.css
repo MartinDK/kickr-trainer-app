@@ -48,7 +48,7 @@
 .cockpit-tile--cadence {
   grid-area: cadence;
 }
-.cockpit-tile--hr {
+.cockpit-tile--right {
   grid-area: hr;
 }
 .cockpit-strip {
@@ -91,6 +91,9 @@
   font-size: 0.9rem;
   color: var(--ck-muted);
   white-space: nowrap;
+}
+.cockpit-tile--right .metric-reading {
+  height: 100%;
 }
 .metric-reading {
   display: flex;
@@ -268,7 +271,7 @@
 }
 
 /* ---------- Heart rate + DFA gauge ---------- */
-.cockpit-tile--hr {
+.cockpit-tile--right {
   justify-content: space-between;
 }
 .dfa {
@@ -433,7 +436,7 @@
 } /* ---------- Slow-metrics strip ---------- */
 .cockpit-strip {
   display: grid;
-  grid-template-columns: repeat(1, auto) 1fr;
+  grid-template-columns: repeat(2, auto) 1fr;
   gap: 32px;
   align-items: center;
 }
@@ -468,7 +471,7 @@
     min-height: 0;
   }
   .cockpit-strip {
-    grid-template-columns: repeat(3, auto);
+    grid-template-columns: repeat(2, auto);
     gap: 16px 24px;
   }
   .strip-item--wbal {

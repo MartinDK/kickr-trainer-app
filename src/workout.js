@@ -95,6 +95,7 @@ export function workoutValueAt(time) {
       return {
         value: from.v + (to.v - from.v) * ratio,
         segment: i,
+        segmentStart: from.t, // <- add
         segmentEnd: to.t,
         nextValue: i + 1 < points.length ? points[i + 1].v : to.v,
       };
@@ -104,6 +105,7 @@ export function workoutValueAt(time) {
   return {
     value: last.v,
     segment: points.length,
+    segmentStart: last.t, // <- add
     segmentEnd: workout.duration,
     nextValue: last.v,
   };
@@ -144,6 +146,15 @@ export function applyWorkoutTarget() {
 
 export function renderWorkout() {
   drawPowerChart(currentFtp());
+  updateSkipButton();
+}
+
+function updateSkipButton() {
+  const btn = $("btnNextInterval");
+  if (!btn) return;
+  btn.disabled =
+    !workout.points.length ||
+    workoutValueAt(workout.elapsed).segmentEnd >= workout.duration;
 }
 
 export function setWorkoutMode(mode, silent) {
@@ -191,6 +202,25 @@ export function pauseWorkout(reason) {
     reason || "Workout paused at " + formatTime(workout.elapsed) + ".",
     "warning",
   );
+}
+
+export function skipToNextInterval() {
+  if (!workout.points.length) return;
+  const { segmentEnd } = workoutValueAt(workout.elapsed);
+  if (segmentEnd >= workout.duration) return; // already in the last interval
+
+  if (workout.playing) {
+    // Reuse the normal tick: chime, lap reset, trainer target and chart all update.
+    // The 1e-6 keeps float rounding from leaving us just inside the old segment.
+    advanceWorkout(segmentEnd - workout.elapsed + 1e-6);
+  } else {
+    workout.elapsed = segmentEnd + 1e-6;
+    workout.segment = workoutValueAt(workout.elapsed).segment;
+    workout.lastCountdownSec = -1;
+    ride.intervalSeconds = 0;
+    renderWorkout(); // target is re-sent when you press Resume
+  }
+  log("Skipped to " + formatTime(segmentEnd) + ".", "info");
 }
 
 export function stopWorkout() {
@@ -298,7 +328,11 @@ export async function loadWorkoutFile(file) {
       " · " +
       (parsed.unit === "percent" ? "% FTP" : "watts");
     const playButton = $("workoutPlayBtn");
+
     playButton.disabled = false;
+    $("btn-stop-workout").disabled = false;
+    updateSkipButton();
+
     playButton.textContent = "Play Workout";
     playButton.classList.replace("button--secondary", "button--primary");
     $("workoutFileLabel").classList.replace(

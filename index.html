@@ -105,6 +105,33 @@
         <section class="dashboard-card" aria-labelledby="trainerControlTitle">
           <div class="card-header">
             <h2 class="card-title">Trainer Control</h2>
+            <div class="workout-buttons">
+              <button
+                id="btn-save-csv-workout"
+                type="button"
+                class="button button--ghost button--small"
+              >
+                Save CSV
+              </button>
+              <button
+                id="btn-upload-intervals"
+                type="button"
+                class="button button--ghost button--small"
+                title="Upload ride to Intervals.icu (free account supported)"
+              >
+                Intervals.icu
+              </button>
+              <a href="./workout.html">
+                <button
+                  id="btn-workout-builder"
+                  type="button"
+                  class="button button--ghost button--small"
+                  title="Create Workout"
+                >
+                  Build Workout
+                </button>
+              </a>
+            </div>
           </div>
 
           <div
@@ -114,10 +141,18 @@
             aria-label="Trainer mode"
           >
             <button
-              id="tab-erg"
+              id="tab-workout"
               type="button"
               class="mode-tab-button mode-tab-button--active"
-              aria-pressed="true"
+              aria-pressed="false"
+            >
+              Workout
+            </button>
+            <button
+              id="tab-erg"
+              type="button"
+              class="mode-tab-button"
+              aria-pressed="false"
             >
               ERG Mode
             </button>
@@ -148,7 +183,7 @@
           </div>
 
           <!-- TAB 1: ERG MODE -->
-          <div id="panel-erg" class="mode-panel">
+          <div id="panel-erg" class="mode-panel is-hidden">
             <div>
               <h3 class="mode-panel-title">Constant Wattage (ERG)</h3>
             </div>
@@ -272,11 +307,7 @@
           <!-- TAB 3: LEVEL MODE -->
           <div id="panel-level" class="mode-panel is-hidden">
             <div>
-              <h3 class="mode-panel-title">Standard / Level Resistance</h3>
-              <p class="mode-panel-description">
-                Simulates traditional fluid or magnetic resistance curve (Levels
-                0 - 9).
-              </p>
+              <h3 class="mode-panel-title">Level Resistance (Levels 0 - 9)</h3>
             </div>
             <div class="target-stepper">
               <button
@@ -324,10 +355,9 @@
           <!-- TAB 4: SIM MODE -->
           <div id="panel-sim" class="mode-panel is-hidden">
             <div>
-              <h3 class="mode-panel-title">Outdoor Physics Simulation</h3>
-              <p class="mode-panel-description">
-                Send grade and weight parameters to mimic outdoor road riding.
-              </p>
+              <h3 class="mode-panel-title">
+                Simulation (Mimic outdoor riding)
+              </h3>
             </div>
             <div class="form-grid">
               <div class="form-field">
@@ -467,180 +497,193 @@
               Transmit Sim Parameters
             </button>
           </div>
-        </section>
-
-        <!-- Workout player -->
-        <section class="dashboard-card" aria-labelledby="workoutTitle">
-          <div class="card-header">
-            <div class="card-heading-group">
-              <h2 id="workoutTitle" class="card-title">
-                Workout Player (.mrc / .erg)
-              </h2>
-              <p id="workoutTitleDisplay" class="card-subtitle">
-                No workout loaded
-              </p>
+          <!-- TAB 5: WORKOUT (moved from its own card; all IDs unchanged) -->
+          <div id="panel-workout" class="mode-panel">
+            <div class="card-header">
+              <div class="card-heading-group">
+                <h3 id="workoutTitle" class="mode-panel-title">
+                  Workout Player (.mrc / .erg)
+                </h3>
+              </div>
             </div>
-            <div class="card-actions">
+
+            <div class="workout-primary-actions">
+              <button
+                id="workoutPlayBtn"
+                type="button"
+                class="button button--secondary"
+                disabled
+              >
+                Start Workout
+              </button>
               <button
                 id="btn-stop-workout"
                 type="button"
                 class="button button--ghost button--small"
+                disabled
               >
-                Stop &amp; reset
+                Restart Workout
               </button>
-              <button
-                id="btn-save-csv-workout"
-                type="button"
-                class="button button--ghost button--small"
+              <label
+                id="workoutFileLabel"
+                class="button button--primary file-picker-button"
               >
-                Save CSV
-              </button>
-              <button
-                id="btn-upload-intervals"
-                type="button"
-                class="button button--ghost button--small"
-                title="Upload ride to Intervals.icu (free account supported)"
-              >
-                Intervals.icu
-              </button>
-              <a href="./workout-builder.html">
-                <button
-                  id="btn-workout-builder"
-                  type="button"
-                  class="button button--ghost button--small"
-                  title="Create Workout"
-                >
-                  Build Workout
-                </button>
-              </a>
-            </div>
-          </div>
-
-          <div class="workout-primary-actions">
-            <button
-              id="workoutPlayBtn"
-              type="button"
-              class="button button--secondary"
-              disabled
-            >
-              Play Workout
-            </button>
-            <label
-              id="workoutFileLabel"
-              class="button button--primary file-picker-button"
-            >
-              Load File
-              <input
-                type="file"
-                id="workoutFileInput"
-                accept=".mrc,.erg"
-                class="file-picker-input"
-              />
-            </label>
-          </div>
-
-          <div class="stat-grid">
-            <div class="stat-tile stat-tile--with-input">
-              <div class="form-field">
-                <label class="stat-label" for="ftpInput">RIDER FTP</label>
-                <div class="preset-input-wrapper">
-                  <input
-                    type="number"
-                    id="ftpInput"
-                    class="preset-input"
-                    min="155"
-                    max="300"
-                    step="1"
-                    inputmode="numeric"
-                    value="236"
-                    aria-label="Rider FTP in Watts"
-                  />
-                  <span class="input-unit">W</span>
-                  <div class="preset-stepper">
-                    <button type="button" tabindex="-1" id="ftpIncBtn">
-                      ▲
-                    </button>
-                    <button type="button" tabindex="-1" id="ftpDecBtn">
-                      ▼
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="stat-tile stat-tile--with-input">
-              <div class="form-field">
-                <label class="stat-label" for="wPrimeInput">W' CAPACITY</label>
-                <!-- W' Capacity Card -->
-                <div class="preset-input-wrapper">
-                  <input
-                    type="number"
-                    id="wPrimeInput"
-                    class="preset-input"
-                    min="5000"
-                    max="40000"
-                    step="500"
-                    value="19000"
-                  />
-                  <span class="input-unit">J</span>
-                  <div class="preset-stepper">
-                    <button
-                      type="button"
-                      id="wPrimeIncBtn"
-                      aria-label="Increase W'"
-                    >
-                      ▲
-                    </button>
-                    <button
-                      type="button"
-                      id="wPrimeDecBtn"
-                      aria-label="Decrease W'"
-                    >
-                      ▼
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="stat-tile">
-              <label class="terminal-toggle-label" style="margin-left: auto">
+                Load Workout
                 <input
-                  type="checkbox"
-                  id="audioCuesToggle"
-                  class="terminal-toggle-input"
-                  checked
+                  type="file"
+                  id="workoutFileInput"
+                  accept=".mrc,.erg"
+                  class="file-picker-input"
                 />
-                <span>Audio</span>
               </label>
             </div>
-          </div>
 
-          <div class="workout-mode-row">
-            <div class="workout-mode-controls">
-              <span class="workout-mode-label">Mode:</span>
-              <div class="toggle-group" role="group" aria-label="Workout mode">
-                <button
-                  id="btnModeErg"
-                  type="button"
-                  class="toggle-button toggle-button--active"
-                  aria-pressed="true"
-                >
-                  ERG Mode
-                </button>
-                <button
-                  id="btnModeRes"
-                  type="button"
-                  class="toggle-button"
-                  aria-pressed="false"
-                >
-                  Resistance Mode
-                </button>
+            <div class="stat-grid">
+              <div class="stat-tile">
+                <label class="stat-label">Mode</label>
+                <div class="workout-mode-controls">
+                  <div
+                    class="toggle-group"
+                    role="group"
+                    aria-label="Workout mode"
+                  >
+                    <button
+                      id="btnModeErg"
+                      type="button"
+                      class="toggle-button toggle-button--active"
+                      aria-pressed="true"
+                    >
+                      ERG Mode
+                    </button>
+                    <button
+                      id="btnModeRes"
+                      type="button"
+                      class="toggle-button"
+                      aria-pressed="false"
+                    >
+                      Resistance Mode
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="stat-tile stat-tile--with-input">
+                <div class="form-field">
+                  <label class="stat-label" for="ftpInput">RIDER FTP</label>
+                  <div class="preset-input-wrapper">
+                    <input
+                      type="number"
+                      id="ftpInput"
+                      class="preset-input"
+                      min="155"
+                      max="300"
+                      step="1"
+                      inputmode="numeric"
+                      value="236"
+                      aria-label="Rider FTP in Watts"
+                    />
+                    <span class="input-unit">W</span>
+                    <div class="preset-stepper">
+                      <button type="button" tabindex="-1" id="ftpIncBtn">
+                        ▲
+                      </button>
+                      <button type="button" tabindex="-1" id="ftpDecBtn">
+                        ▼
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="stat-tile stat-tile--with-input">
+                <div class="form-field">
+                  <label class="stat-label" for="wPrimeInput"
+                    >W' CAPACITY</label
+                  >
+                  <div class="preset-input-wrapper">
+                    <input
+                      type="number"
+                      id="wPrimeInput"
+                      class="preset-input"
+                      min="5000"
+                      max="40000"
+                      step="500"
+                      value="19000"
+                    />
+                    <span class="input-unit">J</span>
+                    <div class="preset-stepper">
+                      <button
+                        type="button"
+                        id="wPrimeIncBtn"
+                        aria-label="Increase W'"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        type="button"
+                        id="wPrimeDecBtn"
+                        aria-label="Decrease W'"
+                      >
+                        ▼
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="stat-tile">
+                <label class="terminal-toggle-label" style="margin-left: auto">
+                  <input
+                    type="checkbox"
+                    id="audioCuesToggle"
+                    class="terminal-toggle-input"
+                    checked
+                  />
+                  <span>Audio</span>
+                </label>
               </div>
             </div>
-            <span id="workoutModeDisplay" class="workout-mode-display"
-              >ERG (% FTP)</span
-            >
+
+            <div class="workout-mode-row">
+              <!-- <div class="workout-mode-controls"> -->
+              <!--   <span class="workout-mode-label">Mode:</span> -->
+              <!--   <div -->
+              <!--     class="toggle-group" -->
+              <!--     role="group" -->
+              <!--     aria-label="Workout mode" -->
+              <!--   > -->
+              <!--     <button -->
+              <!--       id="btnModeErg" -->
+              <!--       type="button" -->
+              <!--       class="toggle-button toggle-button--active" -->
+              <!--       aria-pressed="true" -->
+              <!--     > -->
+              <!--       ERG Mode -->
+              <!--     </button> -->
+              <!--     <button -->
+              <!--       id="btnModeRes" -->
+              <!--       type="button" -->
+              <!--       class="toggle-button" -->
+              <!--       aria-pressed="false" -->
+              <!--     > -->
+              <!--       Resistance Mode -->
+              <!--     </button> -->
+              <!--   </div> -->
+              <!-- </div> -->
+
+              <p
+                id="workoutTitleDisplay"
+                class="card-subtitle workout-name-display"
+              >
+                <span>Workout Name: </span>
+                No workout loaded
+              </p>
+
+              <span id="workoutModeDisplay" class="workout-mode-display"
+              <!--   >ERG (% FTP)</span -->
+              <!-- > -->
+            </div>
           </div>
         </section>
+
+        <!-- Workout player -->
       </div>
 
       <!-- 1. Live ride cockpit: the numbers a rider checks at a glance -->
@@ -772,17 +815,16 @@
           </article>
 
           <!-- Normalised Power + DFA a1 gauge -->
-          <article class="cockpit-tile cockpit-tile--hr">
-            <span class="metric-label">NP</span>
+          <article class="cockpit-tile cockpit-tile--right">
             <div class="metric-reading">
-              <div class="metric-group">
-                <span
-                  id="npDisplay"
-                  class="metric-value metric-value--hero-sm metric-value--lime"
-                  >--</span
-                >
-                <span class="metric-unit">W</span>
-              </div>
+              <button
+                id="btnNextInterval"
+                type="button"
+                class="button button--primary button--block"
+                disabled
+              >
+                Next interval ›
+              </button>
             </div>
 
             <div class="dfa">
@@ -850,6 +892,17 @@
               <span id="tssDisplay" class="metric-value metric-value--medium"
                 >0.0</span
               >
+            </div>
+            <div class="strip-item">
+              <span class="metric-label">NP</span>
+              <span class="strip-item-value">
+                <span
+                  id="npDisplay"
+                  class="metric-value metric-value--medium metric-value--lime"
+                  >---</span
+                >
+                <span class="metric-unit">W</span>
+              </span>
             </div>
             <div class="strip-item strip-item--wbal">
               <div class="wbal-head">

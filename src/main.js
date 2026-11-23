@@ -63,6 +63,7 @@ import {
   saveWorkoutCsv,
   setWorkoutMode,
   stopWorkout,
+  skipToNextInterval,
 } from "./workout.js";
 import {
   connectDevice,
@@ -380,6 +381,7 @@ $("btn-stop-workout").addEventListener("click", () => {
   stopWorkout();
   log("Workout stopped and rewound.", "info");
 });
+$("btnNextInterval").addEventListener("click", skipToNextInterval);
 
 // ============================================================
 // EVENT WIRING: EXPORT AND INTERVALS.ICU
