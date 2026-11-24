@@ -539,7 +539,7 @@
             </div>
 
             <div class="stat-grid">
-              <div class="stat-tile">
+              <div class="form-field">
                 <label class="stat-label">Mode</label>
                 <div class="workout-mode-controls">
                   <div
@@ -793,25 +793,31 @@
             <div class="metric-reading">
               <span
                 id="intervalTimeDisplay"
-                class="metric-value metric-value--xl metric-value--amber"
+                class="metric-value metric-value--large metric-value--amber"
                 >00:00</span
               >
             </div>
             <div class="progress-bar" aria-hidden="true">
               <div id="intervalProgressFill" class="progress-bar-fill"></div>
             </div>
-            <span id="intervalSub" class="metric-note">no interval</span>
+            <div class="metric-group">
+              <span id="intervalSubNote" class= "metric-note"></span>
+              <span id="intervalSub" class="metric-note metric-value--small">no interval</span>
+            </div>
           </article>
 
           <!-- Total Time -->
-          <article class="cockpit-tile cockpit-tile--cadence">
-            <span class="metric-label">Total Time</span>
+          <article class="cockpit-tile cockpit-tile--workout">
+            <span class="metric-label">Workout remaining</span>
             <div class="metric-reading">
-              <span id="totalTimeDisplay" class="metric-value metric-value--xl"
-                >--</span
-              >
+              <span id="workoutRemainingDisplay"
+                    class="metric-value metric-value--large">--</span>
             </div>
-            <span id="cadenceSub" class="metric-note is-hidden">&nbsp;</span>
+            <div class="metric-group">
+              <span id="workoutRemainingSubNote" class="metric-note metric-value--small"></span>
+              <span id="workoutRemainingSub" class="metric-note">no workout</span>
+            </div>
+            <!-- <span id="cadenceSub" class="metric-note is-hidden">&nbsp;</span> -->
           </article>
 
           <!-- Normalised Power + DFA a1 gauge -->
@@ -887,6 +893,15 @@
 
           <!-- Slow metrics strip -->
           <div class="cockpit-strip">
+            <div class="strip-item">
+
+            <span class="metric-label">Total Time</span>
+            <div class="metric-reading">
+              <span id="totalTimeDisplay" class="metric-value metric-value--medium"
+                >--</span>
+            </div>
+
+            </div>
             <div class="strip-item">
               <span class="metric-label">TSS</span>
               <span id="tssDisplay" class="metric-value metric-value--medium"

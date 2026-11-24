@@ -204,6 +204,19 @@ export function pauseWorkout(reason) {
   );
 }
 
+export function intervalPosition(time = workout.elapsed) {
+  const pts = workout.points;
+  let index = 0;
+  let total = 0;
+  for (let i = 1; i < pts.length; i++) {
+    if (pts[i].t > pts[i - 1].t) {
+      total++;
+      if (time >= pts[i - 1].t && time < pts[i].t) index = total;
+    }
+  }
+  return { index, total };
+}
+
 export function skipToNextInterval() {
   if (!workout.points.length) return;
   const { segmentEnd } = workoutValueAt(workout.elapsed);

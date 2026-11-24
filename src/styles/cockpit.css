@@ -45,7 +45,8 @@
 .cockpit-tile--interval {
   grid-area: interval;
 }
-.cockpit-tile--cadence {
+.cockpit-tile--cadence,
+.cockpit-tile-workout {
   grid-area: cadence;
 }
 .cockpit-tile--right {
@@ -83,7 +84,7 @@
   letter-spacing: 0;
 }
 .metric-note {
-  font-size: 0.85rem;
+  font-size: 1rem;
   color: var(--ck-muted);
   white-space: nowrap;
 }
@@ -91,6 +92,9 @@
   font-size: 0.9rem;
   color: var(--ck-muted);
   white-space: nowrap;
+}
+.metric-group {
+  margin-top: 0.25rem;
 }
 .cockpit-tile--right .metric-reading {
   height: 100%;
@@ -246,7 +250,8 @@
 
 /* ---------- Interval / progress bars ---------- */
 .cockpit-tile--interval,
-.cockpit-tile--cadence {
+.cockpit-tile--cadence,
+.cockpit-tile--workout {
   justify-content: center;
 }
 
@@ -436,7 +441,7 @@
 } /* ---------- Slow-metrics strip ---------- */
 .cockpit-strip {
   display: grid;
-  grid-template-columns: repeat(2, auto) 1fr;
+  grid-template-columns: repeat(3, auto) 1fr;
   gap: 32px;
   align-items: center;
 }
