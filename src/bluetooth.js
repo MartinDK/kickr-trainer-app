@@ -1,4 +1,5 @@
 // bluetooth.js — Web Bluetooth connections, packet parsing, and demo data generator
+import { renderDriftTable } from "./drift.js";
 import {
   $,
   CHARACTERISTIC,
@@ -572,6 +573,14 @@ export function recordHistorySample(now, elapsedSeconds = 1) {
   telemetry.history.push({ trainer, pedals, target, hr });
   if (telemetry.history.length > HISTORY_SECONDS) telemetry.history.shift();
 
+  // Only tag rows while a workout is actually playing, so paused time is ignored
+  const wInfo =
+    ride.targetSource === "workout" && workout.playing
+      ? workoutValueAt(workout.elapsed)
+      : null;
+  const pos = wInfo ? intervalPosition() : null;
+  const inInterval = pos !== null && pos.index > 0;
+
   // Record full-ride sample for CSV & Intervals.icu TCX export
   telemetry.fullRideLog.push({
     elapsedSeconds: Math.round(ride.seconds),
@@ -588,7 +597,15 @@ export function recordHistorySample(now, elapsedSeconds = 1) {
     hr,
     cadence: cadenceObj ? cadenceObj.rpm : null,
     dfaA1: currentDfaAlpha1(now),
+    segment: inInterval ? pos.index : null,
+    segElapsed: inInterval
+      ? Math.round(workout.elapsed - wInfo.segmentStart)
+      : null,
+    segRemaining: inInterval
+      ? Math.round(wInfo.segmentEnd - workout.elapsed)
+      : null,
   });
+  if (Math.round(ride.seconds) % 5 === 0) renderDriftTable(); // live drift, every 5 s
 }
 
 function demoRiderPower() {

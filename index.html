@@ -96,6 +96,9 @@
           <button id="btn-demo" type="button" class="link-button">
             Try demo data
           </button>
+          <button id="btn-test-mode" type="button" class="link-button">
+            Test mode: off
+          </button>
         </p>
       </div>
 
@@ -421,9 +424,9 @@
                       type="button"
                       tabindex="-1"
                       onclick="
-                        document.getElementById('simWeightInput').stepUp();
+                        document.getElementById('simCrrInput').stepUp();
                         document
-                          .getElementById('simWeightInput')
+                          .getElementById('simCrrInput')
                           .dispatchEvent(new Event('input'));
                       "
                     >
@@ -433,9 +436,9 @@
                       type="button"
                       tabindex="-1"
                       onclick="
-                        document.getElementById('simWeightInput').stepDown();
+                        document.getElementById('simCrrInput').stepDown();
                         document
-                          .getElementById('simWeightInput')
+                          .getElementById('simCrrInput')
                           .dispatchEvent(new Event('input'));
                       "
                     >
@@ -445,11 +448,11 @@
                 </div>
               </div>
             </div>
-            <div class="form-field">
+            <div class="form-field form-field--simulation">
               <label class="form-label" for="gradeSlider"
                 >Gradient / Slope (%)</label
               >
-              <div class="target-stepper">
+              <div class="target-stepper target-stepper--simulation">
                 <button
                   type="button"
                   class="stepper-button"
@@ -472,7 +475,7 @@
                   +0.5
                 </button>
               </div>
-              <div class="slider-block">
+              <div class="slider-block slider-block--simulation">
                 <input
                   type="range"
                   id="gradeSlider"
@@ -522,7 +525,7 @@
                 class="button button--ghost button--small"
                 disabled
               >
-                Restart Workout
+                Reset Workout
               </button>
               <label
                 id="workoutFileLabel"
@@ -1002,7 +1005,10 @@
           aria-label="Training Data: Power, Workout Profile, and Heart Rate"
         ></canvas>
       </section>
-
+      <!-- Interval drift -->
+      <section class="dashboard-card dashboard-card--compact" aria-labelledby="driftTitle">
+        <div id="driftTable" class="drift-scroll"></div>
+      </section>
       <!-- 4. Heart rate variability -->
       <section class="dashboard-card" aria-labelledby="hrvTitle">
         <div class="card-header">
