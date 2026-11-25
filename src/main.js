@@ -84,7 +84,7 @@ import {
   saveIntervalsCredentials,
   uploadToIntervalsIcu,
 } from "./intervals.js";
-
+import { renderDriftTable } from "./drift.js";
 // ============================================================
 // SMALL HELPERS
 // ============================================================
@@ -135,6 +135,14 @@ $("btn-trainer").addEventListener("click", () => connectDevice("trainer"));
 $("btn-hr").addEventListener("click", () => connectDevice("hr"));
 $("btn-pedals").addEventListener("click", () => connectDevice("pedals"));
 $("btn-demo").addEventListener("click", startDemo);
+
+// Test mode: demo data starts by itself on every page load
+const testMode = store.get("testMode", false);
+$("btn-test-mode").textContent = "Test mode: " + (testMode ? "on" : "off");
+$("btn-test-mode").addEventListener("click", () => {
+  store.set("testMode", !testMode);
+  location.reload();
+});
 
 // ============================================================
 // REUSABLE STEPPER CONTROL WIRING
@@ -502,6 +510,8 @@ Object.keys(devices).forEach(renderDevice);
 setHrvWindow(telemetry.hrvWindow);
 setWorkoutMode("erg", true);
 setTarget("erg", Number(sliders.erg.slider.value));
+renderDriftTable();
+selectModeTab("workout");
 setSendStatus(
   "Trainer not connected. " +
     targetSummary() +
@@ -550,6 +560,6 @@ function tick() {
   }
 }
 
-// Start keyboard shortcuts once, then start the loop.
 initShortcuts();
 setInterval(tick, 1000);
+if (testMode) startDemo();

@@ -331,18 +331,35 @@ a.home:focus-visible {
   height: 22px;
   pointer-events: none;
 }
-.num {
+#inums {
   position: absolute;
-  top: 4px;
+  inset: 0;
+  pointer-events: none;
+}
+.inum {
+  position: absolute;
+  bottom: 4px;
   transform: translateX(-50%);
-  min-width: 1.2rem;
-  padding: 1px 4px;
-  text-align: center;
-  font: 0.7rem var(--mono);
-  color: var(--muted);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--track);
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.4;
+  padding: 0 5px;
+  border-radius: 9px;
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.35);
+}
+.tm {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  color: var(--muted, #8793ad);
+  white-space: nowrap;
+}
+.tm.first {
+  transform: none;
+}
+.tm.last {
+  transform: translateX(-100%);
 }
 .top {
   gap: 14px 16px;

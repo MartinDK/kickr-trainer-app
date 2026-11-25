@@ -1,4 +1,5 @@
 // bluetooth.js — Web Bluetooth connections, packet parsing, and demo data generator
+import { renderDriftTable } from "./drift.js";
 import {
   $,
   CHARACTERISTIC,
@@ -24,7 +25,11 @@ import {
   targetSummary,
   writeControlBytes,
 } from "./trainer.js";
-import { applyWorkoutTarget, workoutValueAt } from "./workout.js";
+import {
+  applyWorkoutTarget,
+  intervalPosition,
+  workoutValueAt,
+} from "./workout.js";
 import { currentDfaAlpha1, renderHrv } from "./hrv.js";
 import { drawPowerChart } from "./charts.js";
 import { renderPowerMetrics, updatePowerMetrics } from "./metrics.js";
@@ -507,9 +512,22 @@ export function renderLive(now = Date.now()) {
   $("liveHrDisplay").textContent = heartRateText;
 
   $("totalTimeDisplay").textContent = formatTime(ride.seconds);
+  const remaining = workout.points.length
+    ? Math.max(0, workout.duration - workout.elapsed)
+    : null;
+  $("workoutRemainingDisplay").textContent =
+    remaining === null ? "--" : formatTime(Math.ceil(remaining));
+  $("workoutRemainingSub").textContent =
+    remaining === null ? "no workout" : `${formatTime(workout.duration)}`;
+  if (remaining) {
+    $("workoutRemainingSubNote").textContent = "of ";
+    $("workoutRemainingSub").classList.add("metric-value");
+  }
 
   let intervalElapsed = ride.intervalSeconds;
   let intervalTotal = null; // null = lap timer (free ride / manual control)
+
+  let intervalLabelText = null; // null = default label in updateInterval
 
   if (ride.targetSource === "workout") {
     const info = workoutValueAt(workout.elapsed);
@@ -517,9 +535,12 @@ export function renderLive(now = Date.now()) {
     if (total > 0) {
       intervalElapsed = workout.elapsed - info.segmentStart;
       intervalTotal = total;
+      const pos = intervalPosition();
+      intervalLabelText = `Interval ${pos.index} of ${pos.total}`;
     }
   }
-  updateInterval(intervalElapsed, intervalTotal);
+
+  updateInterval(intervalElapsed, intervalTotal, intervalLabelText);
   renderPowerMetrics();
   renderHrv(now);
   drawPowerChart();
@@ -552,6 +573,14 @@ export function recordHistorySample(now, elapsedSeconds = 1) {
   telemetry.history.push({ trainer, pedals, target, hr });
   if (telemetry.history.length > HISTORY_SECONDS) telemetry.history.shift();
 
+  // Only tag rows while a workout is actually playing, so paused time is ignored
+  const wInfo =
+    ride.targetSource === "workout" && workout.playing
+      ? workoutValueAt(workout.elapsed)
+      : null;
+  const pos = wInfo ? intervalPosition() : null;
+  const inInterval = pos !== null && pos.index > 0;
+
   // Record full-ride sample for CSV & Intervals.icu TCX export
   telemetry.fullRideLog.push({
     elapsedSeconds: Math.round(ride.seconds),
@@ -568,7 +597,15 @@ export function recordHistorySample(now, elapsedSeconds = 1) {
     hr,
     cadence: cadenceObj ? cadenceObj.rpm : null,
     dfaA1: currentDfaAlpha1(now),
+    segment: inInterval ? pos.index : null,
+    segElapsed: inInterval
+      ? Math.round(workout.elapsed - wInfo.segmentStart)
+      : null,
+    segRemaining: inInterval
+      ? Math.round(wInfo.segmentEnd - workout.elapsed)
+      : null,
   });
+  if (Math.round(ride.seconds) % 5 === 0) renderDriftTable(); // live drift, every 5 s
 }
 
 function demoRiderPower() {

@@ -97,6 +97,10 @@
             Try demo data
           </button>
         </p>
+
+          <button id="btn-test-mode" type="button" class="link-button">
+            Test mode: off
+          </button>
       </div>
 
       <!-- 2. Controls: what the rider changes during a session -->
@@ -421,9 +425,9 @@
                       type="button"
                       tabindex="-1"
                       onclick="
-                        document.getElementById('simWeightInput').stepUp();
+                        document.getElementById('simCrrInput').stepUp();
                         document
-                          .getElementById('simWeightInput')
+                          .getElementById('simCrrInput')
                           .dispatchEvent(new Event('input'));
                       "
                     >
@@ -433,9 +437,9 @@
                       type="button"
                       tabindex="-1"
                       onclick="
-                        document.getElementById('simWeightInput').stepDown();
+                        document.getElementById('simCrrInput').stepDown();
                         document
-                          .getElementById('simWeightInput')
+                          .getElementById('simCrrInput')
                           .dispatchEvent(new Event('input'));
                       "
                     >
@@ -445,11 +449,11 @@
                 </div>
               </div>
             </div>
-            <div class="form-field">
+            <div class="form-field form-field--simulation">
               <label class="form-label" for="gradeSlider"
                 >Gradient / Slope (%)</label
               >
-              <div class="target-stepper">
+              <div class="target-stepper target-stepper--simulation">
                 <button
                   type="button"
                   class="stepper-button"
@@ -472,7 +476,7 @@
                   +0.5
                 </button>
               </div>
-              <div class="slider-block">
+              <div class="slider-block slider-block--simulation">
                 <input
                   type="range"
                   id="gradeSlider"
@@ -522,7 +526,7 @@
                 class="button button--ghost button--small"
                 disabled
               >
-                Restart Workout
+                Reset Workout
               </button>
               <label
                 id="workoutFileLabel"
@@ -539,7 +543,7 @@
             </div>
 
             <div class="stat-grid">
-              <div class="stat-tile">
+              <div class="form-field">
                 <label class="stat-label">Mode</label>
                 <div class="workout-mode-controls">
                   <div
@@ -793,25 +797,31 @@
             <div class="metric-reading">
               <span
                 id="intervalTimeDisplay"
-                class="metric-value metric-value--xl metric-value--amber"
+                class="metric-value metric-value--large metric-value--amber"
                 >00:00</span
               >
             </div>
             <div class="progress-bar" aria-hidden="true">
               <div id="intervalProgressFill" class="progress-bar-fill"></div>
             </div>
-            <span id="intervalSub" class="metric-note">no interval</span>
+            <div class="metric-group">
+              <span id="intervalSubNote" class= "metric-note"></span>
+              <span id="intervalSub" class="metric-note metric-value--small">no interval</span>
+            </div>
           </article>
 
           <!-- Total Time -->
-          <article class="cockpit-tile cockpit-tile--cadence">
-            <span class="metric-label">Total Time</span>
+          <article class="cockpit-tile cockpit-tile--workout">
+            <span class="metric-label">Workout remaining</span>
             <div class="metric-reading">
-              <span id="totalTimeDisplay" class="metric-value metric-value--xl"
-                >--</span
-              >
+              <span id="workoutRemainingDisplay"
+                    class="metric-value metric-value--large">--</span>
             </div>
-            <span id="cadenceSub" class="metric-note is-hidden">&nbsp;</span>
+            <div class="metric-group">
+              <span id="workoutRemainingSubNote" class="metric-note metric-value--small"></span>
+              <span id="workoutRemainingSub" class="metric-note">no workout</span>
+            </div>
+            <!-- <span id="cadenceSub" class="metric-note is-hidden">&nbsp;</span> -->
           </article>
 
           <!-- Normalised Power + DFA a1 gauge -->
@@ -887,6 +897,15 @@
 
           <!-- Slow metrics strip -->
           <div class="cockpit-strip">
+            <div class="strip-item">
+
+            <span class="metric-label">Total Time</span>
+            <div class="metric-reading">
+              <span id="totalTimeDisplay" class="metric-value metric-value--medium"
+                >--</span>
+            </div>
+
+            </div>
             <div class="strip-item">
               <span class="metric-label">TSS</span>
               <span id="tssDisplay" class="metric-value metric-value--medium"
@@ -987,7 +1006,10 @@
           aria-label="Training Data: Power, Workout Profile, and Heart Rate"
         ></canvas>
       </section>
-
+      <!-- Interval drift -->
+      <section class="dashboard-card dashboard-card--compact" aria-labelledby="driftTitle">
+        <div id="driftTable" class="drift-scroll"></div>
+      </section>
       <!-- 4. Heart rate variability -->
       <section class="dashboard-card" aria-labelledby="hrvTitle">
         <div class="card-header">
