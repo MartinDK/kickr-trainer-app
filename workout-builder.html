@@ -151,6 +151,7 @@
               <div id="labels"></div>
               <div id="zlabels"></div>
               <div id="nums"></div>
+              <div id="inums"></div>
             </div>
           </div>
         </div>
@@ -203,7 +204,29 @@
           >
         </div>
       </section>
-
+      <section class="card bar">
+        <select id="tplType" aria-label="Template">
+          <option value="endurance">Endurance</option>
+          <option value="threshold">Threshold</option>
+          <option value="vo2">VO2</option>
+          <option value="ftpRamp">FTP ramp</option>
+          <option value="aet">AeT step test</option>
+        </select>
+        <input
+          id="tplMins"
+          type="number"
+          min="20"
+          max="240"
+          value="60"
+          aria-label="Minutes"
+          style="width: 5rem"
+        />
+        <button id="tplGo">Generate</button>
+        <span class="note"
+          >Replaces all steps. Minutes only applies to endurance. FTP ramp and
+          AeT use the FTP above.</span
+        >
+      </section>
       <section class="card bar">
         <button class="primary" data-export="mrc">Download .mrc (% FTP)</button>
         <button data-export="erg">Download .erg (watts)</button>
