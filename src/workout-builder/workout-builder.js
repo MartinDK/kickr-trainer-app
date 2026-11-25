@@ -271,13 +271,45 @@ function update() {
 
   $("#labels").innerHTML = labels;
 
-  // Interval numbers under the chart, centred on each step
-  let nums = "";
+  // Interval numbers on the chart, centred on each step
+  let inums = "";
   W.steps.forEach((s, i) => {
-    nums += `<div class="num" style="left:${((st[i] + en[i]) / 2) * 100}%">${i + 1}</div>`;
+    inums += `<div class="inum" style="left:${((st[i] + en[i]) / 2) * 100}%">${i + 1}</div>`;
   });
-  $("#nums").innerHTML = nums;
-  syncZoneSelects();
+  $("#inums").innerHTML = inums;
+
+  // Time markers under the chart, at interval boundaries
+  const tfmt = (sec) =>
+    sec >= 3600
+      ? Math.floor(sec / 3600) +
+        ":" +
+        String(Math.floor((sec % 3600) / 60)).padStart(2, "0") +
+        ":" +
+        String(sec % 60).padStart(2, "0")
+      : fmt(sec);
+  const MINGAP = 44; // px between marker centres
+  const bounds = [];
+  let tt = 0;
+  W.steps.forEach((s, i) => {
+    bounds.push({ t: tt, x: st[i] * chartW });
+    tt += s.dur;
+  });
+  bounds.push({ t: tt, x: chartW });
+  const kept = [];
+  bounds.forEach((b, i) => {
+    const last = i === bounds.length - 1;
+    if (last)
+      while (kept.length > 1 && b.x - kept[kept.length - 1].x < MINGAP)
+        kept.pop();
+    else if (kept.length && b.x - kept[kept.length - 1].x < MINGAP) return;
+    kept.push({ ...b, cls: i === 0 ? "first" : last ? "last" : "" });
+  });
+  $("#nums").innerHTML = kept
+    .map(
+      (b) =>
+        `<div class="tm ${b.cls}" style="left:${(b.x / chartW) * 100}%">${tfmt(b.t)}</div>`,
+    )
+    .join("");
   $("#name").value !== W.name && ($("#name").value = W.name);
   try {
     localStorage.setItem(KEY, JSON.stringify(W));
@@ -601,3 +633,94 @@ document.addEventListener(
   { passive: false },
 );
 renderRows();
+
+const GEN = {
+  endurance: { pct: 65 },
+  threshold: { pct: 95, reps: 2, rep: 1200, rest: 300, restPct: 55 },
+  vo2: { pct: 115, reps: 5, rep: 180, rest: 180, restPct: 50 },
+  ftpRamp: { warmW: 120, startW: 140, stepW: 20, stepSec: 60, stopAtPct: 170 },
+  aet: { startPct: 60, stepPct: 5, blocks: 8, blockSec: 300 },
+};
+const LABELS = {
+  endurance: "Endurance",
+  threshold: "Threshold",
+  vo2: "VO2",
+  ftpRamp: "FTP ramp",
+  aet: "AeT step test",
+};
+const warm = (sec, a = 45, b = 70) => ({
+  type: "ramp",
+  dur: sec,
+  a,
+  b,
+  text: "Warm up easy",
+});
+const cool = (sec) => ({
+  type: "ramp",
+  dur: sec,
+  a: 55,
+  b: 35,
+  text: "Cool down",
+});
+const hold = (dur, p, text = "") => ({ type: "steady", dur, a: p, b: p, text });
+
+function intervals(g, label, warmSec, coolSec) {
+  const s = [warm(warmSec)];
+  for (let i = 0; i < g.reps; i++) {
+    s.push(hold(g.rep, g.pct, `${label} ${i + 1} of ${g.reps}`));
+    if (i < g.reps - 1) s.push(hold(g.rest, g.restPct));
+  }
+  return [...s, cool(coolSec)];
+}
+
+const TEMPLATES = {
+  endurance: (mins) => [
+    warm(600),
+    hold(mins * 60 - 900, GEN.endurance.pct),
+    cool(300),
+  ],
+  threshold: () => intervals(GEN.threshold, "Threshold", 900, 600),
+  vo2: () => intervals(GEN.vo2, "VO2", 900, 600),
+  ftpRamp: (mins, ftp) => {
+    const g = GEN.ftpRamp;
+    const pct = (w) => +((w / ftp) * 100).toFixed(1);
+    const s = [warm(720, pct(Math.min(g.warmW, g.startW)), pct(g.startW))];
+    for (let w = g.startW; w <= (ftp * g.stopAtPct) / 100; w += g.stepW)
+      s.push(
+        hold(
+          g.stepSec,
+          pct(w),
+          w === g.startW ? "Ramp starts: go until you can't" : "",
+        ),
+      );
+    return [...s, cool(480)];
+  },
+  aet: () => {
+    const g = GEN.aet,
+      s = [warm(600, g.startPct - 10, g.startPct)];
+    for (let i = 0; i < g.blocks; i++)
+      s.push(
+        hold(
+          g.blockSec,
+          g.startPct + i * g.stepPct,
+          i ? "" : "Hold cadence steady",
+        ),
+      );
+    return [...s, cool(300)];
+  },
+};
+
+$("#tplGo").addEventListener("click", () => {
+  const type = $("#tplType").value;
+  const mins = clamp(parseInt($("#tplMins").value, 10) || 60, 20, 240);
+  if (!confirm("Replace all current steps?")) return;
+  W.steps = TEMPLATES[type](mins, W.ftp);
+  W.goal = type;
+  if (!W.name.trim() || W.name === "New workout") W.name = LABELS[type];
+  renderRows();
+});
+const syncMins = () => {
+  $("#tplMins").disabled = $("#tplType").value !== "endurance";
+};
+$("#tplType").addEventListener("change", syncMins);
+syncMins();
